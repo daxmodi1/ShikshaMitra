@@ -1,0 +1,12 @@
+pypdf
+langchain-community
+langchain-huggingface
+fastapi
+uvicorn
+python-dotenv
+pydantic-settings
+groq
+chromadb
+sentence-transformers
+python-multipart
+requests
