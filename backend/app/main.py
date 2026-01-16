@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from app.config import settings
 from app.schemas import AIResponse
 from app.ai import run_ai_pipeline, transcribe_audio
-
+from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline
 app = FastAPI(title=settings.PROJECT_NAME)
 
 @app.get("/")
@@ -27,3 +27,14 @@ async def process_voice(
     
     # 2. RAG Pipeline
     return await run_ai_pipeline(text, teacher_id)
+
+@app.post("/api/ingest-pdf")
+async def ingest_pdf(file: UploadFile = File(...)):
+    """
+    Upload a PDF (e.g., new NCERT Circular).
+    LangChain will chunk it and ChromaDB will embed it.
+    """
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+        
+    return await ingest_pdf_pipeline(file)
