@@ -3,9 +3,11 @@ import json
 import os
 import shutil
 from tempfile import NamedTemporaryFile
+
 from groq import Groq
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from app.config import settings
 from app.db import search_ncert, insert_documents, get_teacher_profile
 from app.schemas import AIResponse
