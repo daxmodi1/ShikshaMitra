@@ -1,0 +1,330 @@
+[
+  {
+    "teacherId": "T001",
+    "name": "Sunita Devi",
+    "schoolId": "SCH001",
+    "grades": ["4", "5"],
+    "subject": "Mathematics",
+    "experience": 6,
+    "monthlyQueries": 9,
+    "riskLevel": "High",
+    "commonIssues": ["Discipline", "Conceptual gaps"]
+  },
+  {
+    "teacherId": "T002",
+    "name": "Anil Kumar",
+    "schoolId": "SCH001",
+    "grades": ["1", "2"],
+    "subject": "Hindi",
+    "experience": 3,
+    "monthlyQueries": 4,
+    "riskLevel": "Medium",
+    "commonIssues": ["Student engagement"]
+  },
+  {
+    "teacherId": "T003",
+    "name": "Meena Kumari",
+    "schoolId": "SCH002",
+    "grades": ["6"],
+    "subject": "Science",
+    "experience": 9,
+    "monthlyQueries": 2,
+    "riskLevel": "Low",
+    "commonIssues": ["Assessment planning"]
+  },
+  {
+    "teacherId": "T004",
+    "name": "Ravi Prasad",
+    "schoolId": "SCH001",
+    "grades": ["3"],
+    "subject": "EVS",
+    "experience": 4,
+    "monthlyQueries": 3,
+    "riskLevel": "Low",
+    "commonIssues": ["Lesson pacing"]
+  },
+  {
+    "teacherId": "T005",
+    "name": "Kiran Bala",
+    "schoolId": "SCH001",
+    "grades": ["5"],
+    "subject": "Mathematics",
+    "experience": 8,
+    "monthlyQueries": 6,
+    "riskLevel": "Medium",
+    "commonIssues": ["Word problems"]
+  },
+  {
+    "teacherId": "T006",
+    "name": "Suresh Mahto",
+    "schoolId": "SCH001",
+    "grades": ["2"],
+    "subject": "Hindi",
+    "experience": 11,
+    "monthlyQueries": 1,
+    "riskLevel": "Low",
+    "commonIssues": ["Reading fluency"]
+  },
+
+  {
+    "teacherId": "T007",
+    "name": "Pooja Singh",
+    "schoolId": "SCH002",
+    "grades": ["6"],
+    "subject": "Mathematics",
+    "experience": 5,
+    "monthlyQueries": 7,
+    "riskLevel": "Medium",
+    "commonIssues": ["Fractions"]
+  },
+  {
+    "teacherId": "T008",
+    "name": "Amit Kumar",
+    "schoolId": "SCH002",
+    "grades": ["7"],
+    "subject": "Science",
+    "experience": 10,
+    "monthlyQueries": 2,
+    "riskLevel": "Low",
+    "commonIssues": ["Experiments"]
+  },
+  {
+    "teacherId": "T009",
+    "name": "Rekha Devi",
+    "schoolId": "SCH002",
+    "grades": ["6"],
+    "subject": "Hindi",
+    "experience": 6,
+    "monthlyQueries": 5,
+    "riskLevel": "Medium",
+    "commonIssues": ["Writing skills"]
+  },
+  {
+    "teacherId": "T010",
+    "name": "Manoj Kumar",
+    "schoolId": "SCH002",
+    "grades": ["8"],
+    "subject": "Social Science",
+    "experience": 12,
+    "monthlyQueries": 1,
+    "riskLevel": "Low",
+    "commonIssues": ["Map work"]
+  },
+  {
+    "teacherId": "T011",
+    "name": "Sunil Oraon",
+    "schoolId": "SCH002",
+    "grades": ["7"],
+    "subject": "English",
+    "experience": 4,
+    "monthlyQueries": 4,
+    "riskLevel": "Medium",
+    "commonIssues": ["Vocabulary"]
+  },
+
+  {
+    "teacherId": "T012",
+    "name": "Neha Kumari",
+    "schoolId": "SCH003",
+    "grades": ["1"],
+    "subject": "Hindi",
+    "experience": 2,
+    "monthlyQueries": 8,
+    "riskLevel": "High",
+    "commonIssues": ["Classroom discipline"]
+  },
+  {
+    "teacherId": "T013",
+    "name": "Ramesh Gupta",
+    "schoolId": "SCH003",
+    "grades": ["3"],
+    "subject": "Mathematics",
+    "experience": 15,
+    "monthlyQueries": 2,
+    "riskLevel": "Low",
+    "commonIssues": ["Mental math"]
+  },
+  {
+    "teacherId": "T014",
+    "name": "Sita Devi",
+    "schoolId": "SCH003",
+    "grades": ["4"],
+    "subject": "EVS",
+    "experience": 7,
+    "monthlyQueries": 6,
+    "riskLevel": "Medium",
+    "commonIssues": ["Project work"]
+  },
+  {
+    "teacherId": "T015",
+    "name": "Ajay Kumar",
+    "schoolId": "SCH003",
+    "grades": ["5"],
+    "subject": "English",
+    "experience": 9,
+    "monthlyQueries": 3,
+    "riskLevel": "Low",
+    "commonIssues": ["Sentence formation"]
+  },
+
+  {
+    "teacherId": "T016",
+    "name": "Lakshmi Devi",
+    "schoolId": "SCH004",
+    "grades": ["6"],
+    "subject": "Hindi",
+    "experience": 13,
+    "monthlyQueries": 1,
+    "riskLevel": "Low",
+    "commonIssues": ["Poetry explanation"]
+  },
+  {
+    "teacherId": "T017",
+    "name": "Vikram Singh",
+    "schoolId": "SCH004",
+    "grades": ["7"],
+    "subject": "Mathematics",
+    "experience": 6,
+    "monthlyQueries": 5,
+    "riskLevel": "Medium",
+    "commonIssues": ["Algebra basics"]
+  },
+  {
+    "teacherId": "T018",
+    "name": "Anita Kumari",
+    "schoolId": "SCH004",
+    "grades": ["8"],
+    "subject": "Science",
+    "experience": 11,
+    "monthlyQueries": 2,
+    "riskLevel": "Low",
+    "commonIssues": ["Diagrams"]
+  },
+
+  {
+    "teacherId": "T019",
+    "name": "Deepak Yadav",
+    "schoolId": "SCH005",
+    "grades": ["2"],
+    "subject": "Mathematics",
+    "experience": 5,
+    "monthlyQueries": 9,
+    "riskLevel": "High",
+    "commonIssues": ["Number sense"]
+  },
+  {
+    "teacherId": "T020",
+    "name": "Suman Devi",
+    "schoolId": "SCH005",
+    "grades": ["1"],
+    "subject": "Hindi",
+    "experience": 3,
+    "monthlyQueries": 6,
+    "riskLevel": "Medium",
+    "commonIssues": ["Letter recognition"]
+  },
+
+  {
+    "teacherId": "T021",
+    "name": "Prakash Oraon",
+    "schoolId": "SCH006",
+    "grades": ["6"],
+    "subject": "Social Science",
+    "experience": 14,
+    "monthlyQueries": 2,
+    "riskLevel": "Low",
+    "commonIssues": ["History timelines"]
+  },
+  {
+    "teacherId": "T022",
+    "name": "Ritu Kumari",
+    "schoolId": "SCH006",
+    "grades": ["7"],
+    "subject": "English",
+    "experience": 6,
+    "monthlyQueries": 7,
+    "riskLevel": "Medium",
+    "commonIssues": ["Speaking skills"]
+  },
+  {
+    "teacherId": "T023",
+    "name": "Mahesh Kumar",
+    "schoolId": "SCH006",
+    "grades": ["8"],
+    "subject": "Mathematics",
+    "experience": 10,
+    "monthlyQueries": 3,
+    "riskLevel": "Low",
+    "commonIssues": ["Geometry"]
+  },
+
+  {
+    "teacherId": "T024",
+    "name": "Anju Bala",
+    "schoolId": "SCH007",
+    "grades": ["3"],
+    "subject": "Hindi",
+    "experience": 4,
+    "monthlyQueries": 5,
+    "riskLevel": "Medium",
+    "commonIssues": ["Comprehension"]
+  },
+  {
+    "teacherId": "T025",
+    "name": "Nitesh Kumar",
+    "schoolId": "SCH007",
+    "grades": ["4"],
+    "subject": "Mathematics",
+    "experience": 7,
+    "monthlyQueries": 2,
+    "riskLevel": "Low",
+    "commonIssues": ["Tables"]
+  },
+
+  {
+    "teacherId": "T026",
+    "name": "Shanti Devi",
+    "schoolId": "SCH008",
+    "grades": ["6"],
+    "subject": "Hindi",
+    "experience": 12,
+    "monthlyQueries": 1,
+    "riskLevel": "Low",
+    "commonIssues": ["Grammar"]
+  },
+  {
+    "teacherId": "T027",
+    "name": "Rahul Singh",
+    "schoolId": "SCH008",
+    "grades": ["7"],
+    "subject": "Science",
+    "experience": 8,
+    "monthlyQueries": 6,
+    "riskLevel": "Medium",
+    "commonIssues": ["Experiments"]
+  },
+
+  {
+    "teacherId": "T028",
+    "name": "Pankaj Verma",
+    "schoolId": "SCH009",
+    "grades": ["5"],
+    "subject": "Mathematics",
+    "experience": 9,
+    "monthlyQueries": 8,
+    "riskLevel": "High",
+    "commonIssues": ["Word problems"]
+  },
+
+  {
+    "teacherId": "T029",
+    "name": "Kavita Singh",
+    "schoolId": "SCH010",
+    "grades": ["6"],
+    "subject": "English",
+    "experience": 5,
+    "monthlyQueries": 4,
+    "riskLevel": "Medium",
+    "commonIssues": ["Reading fluency"]
+  }
+]

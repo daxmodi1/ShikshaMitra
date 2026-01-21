@@ -1,0 +1,16 @@
+{
+  "topIssues": [
+    { "issue": "Discipline", "count": 32 },
+    { "issue": "Student Engagement", "count": 27 },
+    { "issue": "Math Concept Gaps", "count": 21 }
+  ],
+  "queriesByGrade": [
+    { "grade": "1-2", "queries": 18 },
+    { "grade": "3-5", "queries": 41 },
+    { "grade": "6-8", "queries": 29 }
+  ],
+  "languageUsage": {
+    "Hindi": 82,
+    "English": 18
+  }
+}
