@@ -3,18 +3,15 @@ import json
 import os
 import shutil
 from tempfile import NamedTemporaryFile
-
 from groq import Groq
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from app.config import settings
 from app.db import search_ncert, insert_documents, get_teacher_profile
 from app.schemas import AIResponse
 
 client = Groq(api_key=settings.GROQ_API_KEY)
 
-# --- 1. System Prompts (Updated for Language Matching) ---
 ANALYTICS_PROMPT = """
 You are Shiksha Mitra, an AI mentor for teachers.
 CONTEXT FROM NCERT: {context}
@@ -38,13 +35,11 @@ FORMAT YOUR RESPONSE AS A VALID JSON OBJECT:
 }}
 """
 
-# --- 2. Voice Processing (Whisper) ---
 async def transcribe_audio(file_bytes: bytes, filename: str) -> str:
     try:
         audio_file = io.BytesIO(file_bytes)
         audio_file.name = filename
         
-        # Removed 'language="hi"' to allow auto-detection of English/Hindi
         transcription = client.audio.transcriptions.create(
             file=(filename, audio_file.read()),
             model=settings.STT_MODEL,
@@ -55,7 +50,6 @@ async def transcribe_audio(file_bytes: bytes, filename: str) -> str:
         print(f"Whisper Error: {e}")
         return ""
 
-# --- 3. Text Generation (Llama 3 + Analytics) ---
 async def generate_smart_answer(query: str, context: str) -> dict:
     formatted_prompt = ANALYTICS_PROMPT.format(context=context)
     
@@ -67,12 +61,11 @@ async def generate_smart_answer(query: str, context: str) -> dict:
             ],
             model=settings.LLM_MODEL,
             temperature=0.3,
-            response_format={"type": "json_object"} # Enforces JSON output
+            response_format={"type": "json_object"}
         )
         return json.loads(chat.choices[0].message.content)
     except Exception as e:
         print(f"LLM Error: {e}")
-        # Fallback if JSON fails
         return {
             "answer": "Sorry, I encountered an error. Please try again.",
             "topic": "Error",
@@ -81,16 +74,12 @@ async def generate_smart_answer(query: str, context: str) -> dict:
             "actions": []
         }
 
-# --- 4. Main RAG Pipeline ---
 async def run_ai_pipeline(query_text: str, teacher_id: str) -> AIResponse:
-    # A. Retrieve (Hybrid Search)
     docs = search_ncert(query_text)
     context_str = "\n\n".join(docs)
     
-    # B. Generate (Smart Answer)
     ai_data = await generate_smart_answer(query_text, context_str)
     
-    # C. Return Structured Response
     return AIResponse(
         answer_text=ai_data.get("answer"),
         source_documents=docs,
@@ -100,7 +89,6 @@ async def run_ai_pipeline(query_text: str, teacher_id: str) -> AIResponse:
         detected_language=ai_data.get("language", "Unknown")
     )
 
-# --- 5. PDF Ingestion Pipeline ---
 async def ingest_pdf_pipeline(file_upload):
     with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         shutil.copyfileobj(file_upload.file, tmp)
@@ -110,7 +98,6 @@ async def ingest_pdf_pipeline(file_upload):
         loader = PyPDFLoader(tmp_path)
         docs = loader.load()
         
-        # Chunking Strategy (Optimized for Context)
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
@@ -121,7 +108,6 @@ async def ingest_pdf_pipeline(file_upload):
         texts = [c.page_content for c in chunks]
         metadatas = [{"source": file_upload.filename, "page": c.metadata.get("page", 0)} for c in chunks]
 
-        # Insert into DB (Updates Hybrid Index automatically)
         count = insert_documents(texts, metadatas)
         
         return {"status": "success", "chunks_added": count, "filename": file_upload.filename}
