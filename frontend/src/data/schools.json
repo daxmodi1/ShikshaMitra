@@ -1,0 +1,12 @@
+[
+  { "schoolId": "SCH001", "name": "GPS Kanke East", "type": "Primary", "teachersCount": 7 },
+  { "schoolId": "SCH002", "name": "UPS Boreya", "type": "Upper Primary", "teachersCount": 6 },
+  { "schoolId": "SCH003", "name": "GPS Pandra", "type": "Primary", "teachersCount": 8 },
+  { "schoolId": "SCH004", "name": "UPS Ratu Road", "type": "Upper Primary", "teachersCount": 7 },
+  { "schoolId": "SCH005", "name": "GPS Hehal", "type": "Primary", "teachersCount": 6 },
+  { "schoolId": "SCH006", "name": "UPS Sukurhuttu", "type": "Upper Primary", "teachersCount": 7 },
+  { "schoolId": "SCH007", "name": "GPS Bariatu", "type": "Primary", "teachersCount": 6 },
+  { "schoolId": "SCH008", "name": "UPS Morabadi", "type": "Upper Primary", "teachersCount": 7 },
+  { "schoolId": "SCH009", "name": "GPS Khelgaon", "type": "Primary", "teachersCount": 7 },
+  { "schoolId": "SCH010", "name": "UPS Lalpur", "type": "Upper Primary", "teachersCount": 7 }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "alertId": "A001",
+    "type": "Teacher",
+    "severity": "High",
+    "message": "Sunita Devi has raised 6 discipline-related queries in the last 7 days.",
+    "teacherId": "T001",
+    "schoolId": "SCH001"
+  },
+  {
+    "alertId": "A002",
+    "type": "School",
+    "severity": "Medium",
+    "message": "GPS Pandra shows increased engagement issues across 3 teachers.",
+    "schoolId": "SCH003"
+  }
+]
