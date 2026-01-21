@@ -1,9 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from app.config import settings
 from app.schemas import AIResponse
-from app.ai import run_ai_pipeline, transcribe_audio
 from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline
+from app.whatsapp import router as whatsapp_router
+
 app = FastAPI(title=settings.PROJECT_NAME)
+
+# Include WhatsApp webhook routes
+app.include_router(whatsapp_router)
 
 @app.get("/")
 def root():

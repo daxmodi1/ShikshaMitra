@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "canva-dev"
+  ],
+  "enableAllProjectMcpServers": true
+}
