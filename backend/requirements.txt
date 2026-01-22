@@ -2,9 +2,9 @@ pypdf
 langchain-community
 langchain-huggingface
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
-pydantic-settings
+pydantic-settings   
 groq
 chromadb
 sentence-transformers
@@ -14,3 +14,4 @@ rank-bm25
 langchain-chroma
 python-jose[cryptography]
 passlib[bcrypt]
+email-validator
