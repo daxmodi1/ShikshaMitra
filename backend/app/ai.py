@@ -3,6 +3,8 @@ import json
 import os
 import shutil
 from tempfile import NamedTemporaryFile
+from typing import List, Dict
+from collections import defaultdict
 from groq import Groq
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -12,9 +14,17 @@ from app.schemas import AIResponse
 
 client = Groq(api_key=settings.GROQ_API_KEY)
 
+# Buffer Memory - stores conversation history per teacher
+# Key: teacher_id, Value: list of {"role": "user"|"assistant", "content": str}
+conversation_memory: Dict[str, List[dict]] = defaultdict(list)
+MAX_MEMORY_MESSAGES = 10  # Keep last 10 exchanges (5 user + 5 assistant)
+
 ANALYTICS_PROMPT = """
 You are Shiksha Mitra, an AI mentor for teachers.
 CONTEXT FROM NCERT: {context}
+
+CONVERSATION HISTORY (for context):
+{conversation_summary}
 
 INSTRUCTIONS:
 1. **LANGUAGE DETECTION:** Detect the language of the user's query (Hindi, English, or Hinglish).
@@ -22,7 +32,7 @@ INSTRUCTIONS:
    - If query is Hindi -> Answer in Hindi (Devanagari).
    - If query is English -> Answer in English.
    - If query is Hinglish -> Answer in Hindi/Hinglish.
-3. **TASK:** Answer the teacher's query using the provided Context.
+3. **TASK:** Answer the teacher's query using the provided Context. If the user's query refers to previous conversation (like "give answers", "explain more", "what about..."), use the conversation history to understand what they're referring to.
 4. **ANALYTICS:** Classify the query topic and sentiment.
 
 FORMAT YOUR RESPONSE AS A VALID JSON OBJECT:
@@ -50,20 +60,66 @@ async def transcribe_audio(file_bytes: bytes, filename: str) -> str:
         print(f"Whisper Error: {e}")
         return ""
 
-async def generate_smart_answer(query: str, context: str) -> dict:
-    formatted_prompt = ANALYTICS_PROMPT.format(context=context)
+def get_conversation_history(teacher_id: str) -> List[dict]:
+    """Get recent conversation history for a teacher."""
+    return conversation_memory[teacher_id][-MAX_MEMORY_MESSAGES:]
+
+def add_to_memory(teacher_id: str, role: str, content: str):
+    """Add a message to the conversation memory."""
+    conversation_memory[teacher_id].append({"role": role, "content": content})
+    # Trim to keep only last MAX_MEMORY_MESSAGES
+    if len(conversation_memory[teacher_id]) > MAX_MEMORY_MESSAGES:
+        conversation_memory[teacher_id] = conversation_memory[teacher_id][-MAX_MEMORY_MESSAGES:]
+
+def clear_memory(teacher_id: str):
+    """Clear conversation memory for a teacher."""
+    conversation_memory[teacher_id] = []
+
+def build_conversation_summary(teacher_id: str) -> str:
+    """Build a text summary of recent conversation for context."""
+    history = get_conversation_history(teacher_id)
+    if not history:
+        return "No previous conversation."
+    
+    summary_parts = []
+    for msg in history:
+        role = "Teacher" if msg["role"] == "user" else "Assistant"
+        # Truncate long messages for summary
+        content = msg["content"][:200] + "..." if len(msg["content"]) > 200 else msg["content"]
+        summary_parts.append(f"{role}: {content}")
+    
+    return "\n".join(summary_parts)
+
+async def generate_smart_answer(query: str, context: str, teacher_id: str) -> dict:
+    # Build conversation summary for context
+    conversation_summary = build_conversation_summary(teacher_id)
+    formatted_prompt = ANALYTICS_PROMPT.format(context=context, conversation_summary=conversation_summary)
+    
+    # Build messages with conversation history
+    messages = [{"role": "system", "content": formatted_prompt}]
+    
+    # Add conversation history for context
+    history = get_conversation_history(teacher_id)
+    messages.extend(history)
+    
+    # Add current query
+    messages.append({"role": "user", "content": query})
     
     try:
         chat = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": formatted_prompt},
-                {"role": "user", "content": query}
-            ],
+            messages=messages,
             model=settings.LLM_MODEL,
             temperature=0.3,
             response_format={"type": "json_object"}
         )
-        return json.loads(chat.choices[0].message.content)
+        response_content = chat.choices[0].message.content
+        result = json.loads(response_content)
+        
+        # Add to memory
+        add_to_memory(teacher_id, "user", query)
+        add_to_memory(teacher_id, "assistant", result.get("answer", ""))
+        
+        return result
     except Exception as e:
         print(f"LLM Error: {e}")
         return {
@@ -75,10 +131,22 @@ async def generate_smart_answer(query: str, context: str) -> dict:
         }
 
 async def run_ai_pipeline(query_text: str, teacher_id: str) -> AIResponse:
-    docs = search_ncert(query_text)
+    # For short/referential queries, include previous query context in RAG search
+    search_query = query_text
+    history = get_conversation_history(teacher_id)
+    
+    # If query is short and there's history, combine with previous user query for better RAG
+    if len(query_text.split()) <= 5 and history:
+        # Find last user message
+        last_user_msgs = [m for m in history if m["role"] == "user"]
+        if last_user_msgs:
+            last_query = last_user_msgs[-1]["content"]
+            search_query = f"{last_query} {query_text}"
+    
+    docs = search_ncert(search_query)
     context_str = "\n\n".join(docs)
     
-    ai_data = await generate_smart_answer(query_text, context_str)
+    ai_data = await generate_smart_answer(query_text, context_str, teacher_id)
     
     return AIResponse(
         answer_text=ai_data.get("answer"),

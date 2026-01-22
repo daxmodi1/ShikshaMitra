@@ -10,8 +10,7 @@ chromadb
 sentence-transformers
 python-multipart
 requests
-pypdf
-langchain-community
-langchain-huggingface
 rank-bm25
 langchain-chroma
+python-jose[cryptography]
+passlib[bcrypt]

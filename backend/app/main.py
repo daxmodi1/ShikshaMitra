@@ -1,31 +1,225 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from datetime import timedelta
+from typing import List
+import uuid
+
 from app.config import settings
-from app.schemas import AIResponse
-from app.ai import run_ai_pipeline, transcribe_audio
-from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline
+from app.schemas import (
+    AIResponse, LoginRequest, LoginResponse, QueryRequest, 
+    ChatHistoryResponse, TeacherProfileResponse
+)
+from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline, clear_memory
+from app.auth import (
+    verify_password, create_access_token, get_current_user, 
+    get_current_crp, get_current_teacher, ACCESS_TOKEN_EXPIRE_MINUTES
+)
+from app.database import (
+    get_user_by_email, get_teacher_by_id, get_teachers_by_crp,
+    save_chat_message, get_teacher_chat_history, get_crp_chat_history,
+    get_crp_analytics, teachers_db
+)
+from app.models import ChatMessage
+
 app = FastAPI(title=settings.PROJECT_NAME)
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite default port
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
     return {"message": "Shiksha Mitra Backend is Running"}
 
-@app.post("/api/process-text", response_model=AIResponse)
-async def process_text(query: str, teacher_id: str = "T1"):
-    return await run_ai_pipeline(query, teacher_id)
+# Authentication Endpoints
+@app.post("/api/auth/login", response_model=LoginResponse)
+async def login(credentials: LoginRequest):
+    user = get_user_by_email(credentials.email)
+    
+    if not user or not verify_password(credentials.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    access_token = create_access_token(
+        data={"sub": user.id, "email": user.email, "role": user.role},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return LoginResponse(
+        access_token=access_token,
+        user_id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        crp_id=user.crp_id
+    )
 
-@app.post("/api/process-voice", response_model=AIResponse)
-async def process_voice(
-    file: UploadFile = File(...), 
-    teacher_id: str = Form(...)
+# Teacher Endpoints
+@app.post("/api/teacher/query", response_model=AIResponse)
+async def teacher_text_query(
+    request: QueryRequest,
+    current_user: dict = Depends(get_current_teacher)
 ):
+    teacher_id = current_user["user_id"]
+    response = await run_ai_pipeline(request.query_text, teacher_id)
+    
+    # Save to chat history
+    chat_msg = ChatMessage(
+        id=str(uuid.uuid4()),
+        teacher_id=teacher_id,
+        query_text=request.query_text,
+        answer_text=response.answer_text,
+        detected_topic=response.detected_topic,
+        query_sentiment=response.query_sentiment,
+        detected_language=response.detected_language,
+        source_type="text"
+    )
+    save_chat_message(chat_msg)
+    
+    return response
+
+@app.post("/api/teacher/query-voice", response_model=AIResponse)
+async def teacher_voice_query(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_teacher)
+):
+    teacher_id = current_user["user_id"]
     file_bytes = await file.read()
     text = await transcribe_audio(file_bytes, file.filename)
     
     if not text:
         raise HTTPException(status_code=400, detail="Audio could not be understood")
     
-    return await run_ai_pipeline(text, teacher_id)
+    response = await run_ai_pipeline(text, teacher_id)
+    
+    # Save to chat history
+    chat_msg = ChatMessage(
+        id=str(uuid.uuid4()),
+        teacher_id=teacher_id,
+        query_text=text,
+        answer_text=response.answer_text,
+        detected_topic=response.detected_topic,
+        query_sentiment=response.query_sentiment,
+        detected_language=response.detected_language,
+        source_type="voice"
+    )
+    save_chat_message(chat_msg)
+    
+    return response
 
+@app.post("/api/teacher/clear-memory")
+async def clear_conversation_memory(
+    current_user: dict = Depends(get_current_teacher)
+):
+    """Clear the conversation buffer memory for the current teacher."""
+    teacher_id = current_user["user_id"]
+    clear_memory(teacher_id)
+    return {"message": "Conversation memory cleared successfully"}
+
+@app.get("/api/teacher/history", response_model=List[ChatHistoryResponse])
+async def get_teacher_history(
+    current_user: dict = Depends(get_current_teacher)
+):
+    teacher_id = current_user["user_id"]
+    history = get_teacher_chat_history(teacher_id)
+    teacher = get_teacher_by_id(teacher_id)
+    
+    return [
+        ChatHistoryResponse(
+            id=msg.id,
+            teacher_id=msg.teacher_id,
+            teacher_name=teacher.name if teacher else "Unknown",
+            query_text=msg.query_text,
+            answer_text=msg.answer_text,
+            detected_topic=msg.detected_topic,
+            query_sentiment=msg.query_sentiment,
+            detected_language=msg.detected_language,
+            source_type=msg.source_type,
+            timestamp=msg.timestamp
+        )
+        for msg in history
+    ]
+
+@app.get("/api/teacher/profile", response_model=TeacherProfileResponse)
+async def get_teacher_profile(
+    current_user: dict = Depends(get_current_teacher)
+):
+    teacher = get_teacher_by_id(current_user["user_id"])
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher profile not found")
+    
+    return TeacherProfileResponse(**teacher.dict())
+
+# CRP Endpoints
+@app.get("/api/crp/teachers", response_model=List[TeacherProfileResponse])
+async def get_crp_teachers(
+    current_user: dict = Depends(get_current_crp)
+):
+    teachers = get_teachers_by_crp(current_user["user_id"])
+    return [TeacherProfileResponse(**t.dict()) for t in teachers]
+
+@app.get("/api/crp/chats", response_model=List[ChatHistoryResponse])
+async def get_crp_chats(
+    current_user: dict = Depends(get_current_crp)
+):
+    history = get_crp_chat_history(current_user["user_id"])
+    
+    return [
+        ChatHistoryResponse(
+            id=msg.id,
+            teacher_id=msg.teacher_id,
+            teacher_name=teachers_db.get(msg.teacher_id).name if teachers_db.get(msg.teacher_id) else "Unknown",
+            query_text=msg.query_text,
+            answer_text=msg.answer_text,
+            detected_topic=msg.detected_topic,
+            query_sentiment=msg.query_sentiment,
+            detected_language=msg.detected_language,
+            source_type=msg.source_type,
+            timestamp=msg.timestamp
+        )
+        for msg in history
+    ]
+
+@app.get("/api/crp/teacher/{teacher_id}/chats", response_model=List[ChatHistoryResponse])
+async def get_specific_teacher_chats(
+    teacher_id: str,
+    current_user: dict = Depends(get_current_crp)
+):
+    # Verify teacher belongs to this CRP
+    teacher = get_teacher_by_id(teacher_id)
+    if not teacher or teacher.crp_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied to this teacher's data")
+    
+    history = get_teacher_chat_history(teacher_id)
+    
+    return [
+        ChatHistoryResponse(
+            id=msg.id,
+            teacher_id=msg.teacher_id,
+            teacher_name=teacher.name,
+            query_text=msg.query_text,
+            answer_text=msg.answer_text,
+            detected_topic=msg.detected_topic,
+            query_sentiment=msg.query_sentiment,
+            detected_language=msg.detected_language,
+            source_type=msg.source_type,
+            timestamp=msg.timestamp
+        )
+        for msg in history
+    ]
+
+@app.get("/api/crp/analytics")
+async def get_analytics(
+    current_user: dict = Depends(get_current_crp)
+):
+    analytics = get_crp_analytics(current_user["user_id"])
+    return analytics.dict()
+
+# Admin/Utility Endpoints (kept for backward compatibility)
 @app.post("/api/ingest-pdf")
 async def ingest_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith(".pdf"):

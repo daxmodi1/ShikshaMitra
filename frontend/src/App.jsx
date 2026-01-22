@@ -7,12 +7,22 @@ import Schools from "./pages/Schools";
 import Alerts from "./pages/Alerts";
 import Insights from "./pages/Insights";
 import Reports from "./pages/Reports";
+import TeacherQuery from "./pages/TeacherQuery";
 import Sidebar from "./components/Sidebar";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      
+      {/* Teacher Routes */}
+      <Route path="/teacher/*" element={
+        <Routes>
+          <Route path="query" element={<TeacherQuery />} />
+        </Routes>
+      } />
+      
+      {/* CRP Routes */}
       <Route
         path="/app/*"
         element={
