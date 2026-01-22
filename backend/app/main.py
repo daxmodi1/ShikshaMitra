@@ -23,16 +23,11 @@ from app.models import ChatMessage
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
-# CORS Configuration
+# CORS Configuration - Allow all origins for deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", 
-        "http://localhost:3000",
-        "https://*.vercel.app",
-        "https://*.onrender.com",  # Render deployments
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when using "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
