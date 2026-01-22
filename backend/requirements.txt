@@ -18,5 +18,5 @@ python-multipart
 requests
 rank-bm25
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 email-validator
