@@ -69,16 +69,20 @@ class ApiService {
   }
 
   // Teacher APIs
-  async teacherQueryText(queryText) {
+  async teacherQueryText(queryText, chatHistory = []) {
     return await this.request('/api/teacher/query', {
       method: 'POST',
-      body: JSON.stringify({ query_text: queryText }),
+      body: JSON.stringify({ 
+        query_text: queryText,
+        chat_history: chatHistory 
+      }),
     });
   }
 
-  async teacherQueryVoice(audioFile) {
+  async teacherQueryVoice(audioFile, chatHistory = []) {
     const formData = new FormData();
     formData.append('file', audioFile);
+    formData.append('chat_history', JSON.stringify(chatHistory));
 
     const url = `${API_BASE_URL}/api/teacher/query-voice`;
     const response = await fetch(url, {

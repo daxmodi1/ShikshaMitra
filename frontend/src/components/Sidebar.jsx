@@ -17,8 +17,11 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-blue-900 text-white flex flex-col">
-      <div className="p-4 text-xl font-semibold border-b border-blue-700">
-        Shiksha Mitra
+      <div className="p-4 border-b border-blue-700">
+        <div className="flex items-center gap-2 text-xl font-semibold">
+          <img src="/logo.png" alt="Shiksha Mitra" className="w-8 h-8 rounded-lg" />
+          <span>Shiksha Mitra</span>
+        </div>
         <div className="text-sm font-normal text-blue-200">
           CRP Portal
         </div>

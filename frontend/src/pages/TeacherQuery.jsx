@@ -1,55 +1,123 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus, MessageCircle, ChevronDown } from "lucide-react";
 import api from "../services/api";
 
 export default function TeacherQuery() {
   const navigate = useNavigate();
   const [queryText, setQueryText] = useState("");
-  const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
+  const [currentChat, setCurrentChat] = useState([]);
   const [user, setUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentChatId, setCurrentChatId] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
-    loadHistory();
+    
+    // Load current chat from localStorage
+    const savedChat = localStorage.getItem('currentChat');
+    if (savedChat) {
+      try {
+        setCurrentChat(JSON.parse(savedChat));
+      } catch (error) {
+        console.error('Failed to load chat:', error);
+      }
+    }
+
+    // Load all chat history
+    const savedHistory = localStorage.getItem('chatHistory');
+    if (savedHistory) {
+      try {
+        setChatHistory(JSON.parse(savedHistory));
+      } catch (error) {
+        console.error('Failed to load history:', error);
+      }
+    }
+
+    // Load current chat ID
+    const savedChatId = localStorage.getItem('currentChatId');
+    if (savedChatId) {
+      setCurrentChatId(savedChatId);
+    }
   }, []);
 
-  const loadHistory = async () => {
-    try {
-      const history = await api.getTeacherHistory();
-      setChatHistory(history);
-    } catch (error) {
-      console.error("Failed to load history:", error);
+  useEffect(() => {
+    scrollToBottom();
+  }, [currentChat]);
+
+  // Save chat to localStorage whenever it changes
+  useEffect(() => {
+    if (currentChat.length > 0) {
+      localStorage.setItem('currentChat', JSON.stringify(currentChat));
+      
+      // Update the chat in history
+      const chatId = currentChatId || `chat-${Date.now()}`;
+      if (!currentChatId) {
+        setCurrentChatId(chatId);
+        localStorage.setItem('currentChatId', chatId);
+      }
+
+      const chatSummary = {
+        id: chatId,
+        query_text: currentChat[0]?.text || 'New Chat',
+        answer_text: currentChat[currentChat.length - 1]?.text || '',
+        timestamp: new Date().toISOString(),
+        detected_topic: currentChat.find(m => m.role === 'assistant')?.topic || '',
+        query_sentiment: currentChat.find(m => m.role === 'assistant')?.sentiment || '',
+        detected_language: currentChat.find(m => m.role === 'assistant')?.language || '',
+        messages: currentChat
+      };
+
+      // Update chat history
+      const updatedHistory = chatHistory.filter(c => c.id !== chatId);
+      updatedHistory.unshift(chatSummary);
+      setChatHistory(updatedHistory);
+      localStorage.setItem('chatHistory', JSON.stringify(updatedHistory));
     }
-  };
+  }, [currentChat]);
 
   const handleTextQuery = async (e) => {
     e.preventDefault();
     if (!queryText.trim()) return;
 
+    const userMessage = { role: "user", text: queryText, timestamp: new Date() };
+    setCurrentChat([...currentChat, userMessage]);
+    setQueryText("");
     setLoading(true);
-    setResponse(null);
 
     try {
-      const result = await api.teacherQueryText(queryText);
-      setResponse(result);
-      setQueryText("");
-      loadHistory(); // Reload history
+      // Send current chat history along with the query for context
+      const result = await api.teacherQueryText(queryText, currentChat);
+      const aiMessage = { 
+        role: "assistant", 
+        text: result.answer_text,
+        topic: result.detected_topic,
+        sentiment: result.query_sentiment,
+        language: result.detected_language,
+        suggestedActions: result.suggested_actions,
+        timestamp: new Date()
+      };
+      setCurrentChat(prev => [...prev, aiMessage]);
     } catch (error) {
-      setResponse({ 
-        answer_text: `Error: ${error.message}`, 
-        detected_topic: "Error",
-        query_sentiment: "Error",
-        detected_language: "Unknown"
-      });
+      const errorMessage = { 
+        role: "assistant", 
+        text: `Error: ${error.message}`,
+        topic: "Error",
+        sentiment: "Error",
+        language: "Unknown",
+        timestamp: new Date()
+      };
+      setCurrentChat(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -87,194 +155,254 @@ export default function TeacherQuery() {
   };
 
   const handleVoiceQuery = async (audioBlob) => {
+    const userMessage = { role: "user", text: "🎤 Voice message sent", isVoice: true, timestamp: new Date() };
+    const updatedChat = [...currentChat, userMessage];
+    setCurrentChat(updatedChat);
     setLoading(true);
-    setResponse(null);
 
     try {
       const audioFile = new File([audioBlob], "recording.webm", { type: "audio/webm" });
-      const result = await api.teacherQueryVoice(audioFile);
-      setResponse(result);
-      loadHistory(); // Reload history
+      // Send current chat history along with voice query for context
+      const result = await api.teacherQueryVoice(audioFile, updatedChat);
+      const aiMessage = { 
+        role: "assistant", 
+        text: result.answer_text,
+        topic: result.detected_topic,
+        sentiment: result.query_sentiment,
+        language: result.detected_language,
+        suggestedActions: result.suggested_actions,
+        timestamp: new Date()
+      };
+      setCurrentChat(prev => [...prev, aiMessage]);
     } catch (error) {
-      setResponse({ 
-        answer_text: `Error: ${error.message}`, 
-        detected_topic: "Error",
-        query_sentiment: "Error",
-        detected_language: "Unknown"
-      });
+      const errorMessage = { 
+        role: "assistant", 
+        text: `Error: ${error.message}`,
+        topic: "Error",
+        sentiment: "Error",
+        language: "Unknown",
+        timestamp: new Date()
+      };
+      setCurrentChat(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
   };
 
+  const startNewChat = () => {
+    setCurrentChat([]);
+    setCurrentChatId(null);
+    localStorage.removeItem('currentChat');
+    localStorage.removeItem('currentChatId');
+  };
+
+  const loadChatSession = (chat) => {
+    if (chat.messages) {
+      setCurrentChat(chat.messages);
+    } else {
+      setCurrentChat([
+        { role: "user", text: chat.query_text, timestamp: new Date(chat.timestamp) },
+        { 
+          role: "assistant", 
+          text: chat.answer_text,
+          topic: chat.detected_topic,
+          sentiment: chat.query_sentiment,
+          language: chat.detected_language,
+          timestamp: new Date(chat.timestamp)
+        }
+      ]);
+    }
+    setCurrentChatId(chat.id);
+    localStorage.setItem('currentChatId', chat.id);
+  };
+
   const handleLogout = () => {
     api.logout();
+    navigate("/login");
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const getChatPreview = (chat) => {
+    const query = chat.query_text.length > 30 
+      ? chat.query_text.substring(0, 30) + "..." 
+      : chat.query_text;
+    return query;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Shiksha Mitra</h1>
-            <p className="text-sm text-gray-600">AI Assistant for Teachers</p>
+    <div className="flex h-screen bg-white">
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col overflow-hidden`}>
+        {/* Logo */}
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-6">
+            <img src="/logo.png" alt="Shiksha Mitra" className="w-8 h-8 rounded-lg" />
+            <h1 className="text-lg font-bold text-gray-900">Shiksha Mitra</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="font-semibold text-gray-800">{user?.name}</p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Logout
-            </button>
+
+          {/* New Chat Button */}
+          <button
+            onClick={startNewChat}
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 py-2 px-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-sm"
+          >
+            <Plus size={18} /> New chat
+          </button>
+        </div>
+
+        {/* Chat History Section */}
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Recent Chats</p>
+          <div className="space-y-1">
+            {chatHistory.length === 0 ? (
+              <p className="text-gray-400 text-xs text-center py-4">No chats yet</p>
+            ) : (
+              chatHistory.map((chat, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => loadChatSession(chat)}
+                  className={`w-full text-left p-2 rounded-lg text-sm transition-colors ${
+                    currentChatId === chat.id 
+                      ? 'bg-gray-100 text-gray-900 font-medium' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                  title={chat.query_text}
+                >
+                  <div className="flex items-start gap-2">
+                    <MessageCircle size={14} className="flex-shrink-0 mt-1 text-gray-500" />
+                    <p className="truncate text-xs">{getChatPreview(chat)}</p>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Query Section */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Query Input Card */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800">Ask Your Question</h2>
-              
-              {/* Text Query */}
-              <form onSubmit={handleTextQuery} className="mb-4">
-                <textarea
+        {/* User Profile Section */}
+        <div className="border-t border-gray-200 p-4">
+          <button
+            onClick={handleLogout}
+            className="w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm text-gray-700 font-medium"
+          >
+            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-700 font-semibold text-xs">
+              {user?.name?.charAt(0) || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900">{user?.name || 'User'}</p>
+              <p className="text-xs text-gray-500 truncate">Logout</p>
+            </div>
+            <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-white">
+        {/* Header */}
+        <div className="border-b border-gray-200 p-4 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-gray-600 hover:text-gray-900 p-2 rounded-lg transition-colors"
+          >
+            <span className="text-xl">{sidebarOpen ? '☰' : '☰'}</span>
+          </button>
+        </div>
+
+        {/* Chat Messages */}
+        <div className="flex-1 overflow-y-auto p-8 flex flex-col">
+          {currentChat.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full -mt-20">
+              <div className="text-center max-w-md">
+                <div className="text-5xl mb-4 flex items-center justify-center">
+                  <span className="relative">
+                    Evening, {user?.name?.split(' ')[0] || 'Teacher'}
+                  </span>
+                </div>
+                <input
+                  type="text"
                   value={queryText}
                   onChange={(e) => setQueryText(e.target.value)}
-                  placeholder="Type your question in Hindi, English, or Hinglish..."
-                  className="w-full border rounded-lg p-3 h-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="How can I help you today?"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') handleTextQuery(e);
+                  }}
                   disabled={loading || recording}
+                  className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-white text-gray-900 rounded-full px-6 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 transition-colors mt-8"
                 />
-                <div className="flex gap-3 mt-3">
-                  <button
-                    type="submit"
-                    disabled={loading || recording || !queryText.trim()}
-                    className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentChat.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
+                >
+                  <div
+                    className={`max-w-2xl ${
+                      msg.role === 'user'
+                        ? 'bg-blue-600 text-white rounded-3xl rounded-br-none'
+                        : 'text-gray-900'
+                    } p-4 rounded-lg`}
                   >
-                    {loading ? "Processing..." : "Send Question"}
-                  </button>
+                    <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.text}</p>
+                    {msg.role === 'assistant' && msg.topic && (
+                      <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-300">
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">📚 {msg.topic}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">💭 {msg.sentiment}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">🌐 {msg.language}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </form>
+              ))}
+              {loading && (
+                <div className="flex justify-start mb-4">
+                  <div className="flex gap-2 p-4">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
 
-              {/* Voice Query */}
-              <div className="border-t pt-4">
-                <p className="text-sm text-gray-600 mb-3">Or ask using your voice:</p>
+        {/* Input Area */}
+        {currentChat.length > 0 && (
+          <div className="border-t border-gray-200 p-8">
+            <div className="max-w-4xl mx-auto">
+              <form onSubmit={handleTextQuery} className="flex gap-3 items-end">
+                <input
+                  type="text"
+                  value={queryText}
+                  onChange={(e) => setQueryText(e.target.value)}
+                  placeholder="How can I help you today?"
+                  disabled={loading || recording}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 focus:bg-white text-gray-900 rounded-full px-6 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 transition-colors"
+                />
                 <button
                   onClick={recording ? stopRecording : startRecording}
                   disabled={loading}
-                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 ${
-                    recording
-                      ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
-                      : "bg-green-600 hover:bg-green-700 text-white"
-                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                  className="text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed p-2"
                 >
-                  <span className="text-xl">{recording ? "⏸️" : "🎤"}</span>
-                  {recording ? "Stop Recording" : "Start Voice Recording"}
+                  <span className="text-xl">{recording ? "⏹" : "🎤"}</span>
                 </button>
-              </div>
-            </div>
-
-            {/* Response Card */}
-            {response && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">Answer</h3>
-                <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                    {response.answer_text}
-                  </p>
-                </div>
-
-                {/* Metadata */}
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div className="bg-gray-50 p-3 rounded">
-                    <p className="text-gray-500 text-xs">Topic</p>
-                    <p className="font-semibold text-gray-700">{response.detected_topic}</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded">
-                    <p className="text-gray-500 text-xs">Sentiment</p>
-                    <p className="font-semibold text-gray-700">{response.query_sentiment}</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded">
-                    <p className="text-gray-500 text-xs">Language</p>
-                    <p className="font-semibold text-gray-700">{response.detected_language}</p>
-                  </div>
-                </div>
-
-                {/* Suggested Actions */}
-                {response.suggested_actions && response.suggested_actions.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Suggested Actions:</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                      {response.suggested_actions.map((action, idx) => (
-                        <li key={idx}>{action}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* History Sidebar */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Recent Chats</h3>
-              <button
-                onClick={async () => {
-                  try {
-                    await api.clearConversationMemory();
-                    setResponse(null);
-                    alert("Started new conversation!");
-                  } catch (error) {
-                    console.error("Failed to clear memory:", error);
-                  }
-                }}
-                className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-              >
-                + New Chat
-              </button>
-            </div>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {chatHistory.length === 0 ? (
-                <p className="text-gray-500 text-sm">No chats yet. Start a conversation!</p>
-              ) : (
-                chatHistory.slice(0, 10).map((chat, idx) => (
-                  <div key={idx} className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
-                    {/* User Query */}
-                    <div className="flex items-start gap-2 mb-2">
-                      <span className="text-lg flex-shrink-0">{chat.source_type === 'voice' ? '🎤' : '👤'}</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800">You</p>
-                        <p className="text-sm text-gray-700 line-clamp-2">{chat.query_text}</p>
-                      </div>
-                    </div>
-                    {/* AI Response */}
-                    <div className="flex items-start gap-2 mt-2 pl-2 border-l-2 border-blue-400">
-                      <span className="text-lg flex-shrink-0">🤖</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-700">Shiksha Mitra</p>
-                        <p className="text-sm text-gray-600 line-clamp-3">{chat.answer_text}</p>
-                      </div>
-                    </div>
-                    {/* Metadata */}
-                    <div className="flex gap-2 text-xs text-gray-500 mt-2 pt-2 border-t">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{chat.detected_topic}</span>
-                      <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded">{chat.detected_language}</span>
-                      <span className="ml-auto">{new Date(chat.timestamp).toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))
-              )}
+                <button
+                  type="submit"
+                  disabled={loading || recording || !queryText.trim()}
+                  className="bg-orange-400 hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors flex-shrink-0"
+                >
+                  <span className="text-xl">↑</span>
+                </button>
+              </form>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
