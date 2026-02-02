@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MessageCircle, ChevronDown } from "lucide-react";
+import { Plus, MessageCircle, ChevronDown, Mic, Square } from "lucide-react";
 import api from "../services/api";
 
 export default function TeacherQuery() {
@@ -13,10 +13,16 @@ export default function TeacherQuery() {
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [audioLevels, setAudioLevels] = useState([]);
+  const [recordingTime, setRecordingTime] = useState(0);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const messagesEndRef = useRef(null);
+  const analyserRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const animationIdRef = useRef(null);
+  const timerIntervalRef = useRef(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -94,7 +100,21 @@ export default function TeacherQuery() {
 
   const startRecording = async () => {
     try {
+      setRecordingTime(0);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      const analyser = audioContext.createAnalyser();
+      analyserRef.current = analyser;
+      analyser.fftSize = 256;
+      
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
 
@@ -105,14 +125,31 @@ export default function TeacherQuery() {
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await handleVoiceQuery(audioBlob);
+        cancelAnimationFrame(animationIdRef.current);
+        setAudioLevels([]);
+        clearInterval(timerIntervalRef.current);
+        setRecordingTime(0);
       };
 
       mediaRecorderRef.current.start();
       setRecording(true);
+      visualizeAudio(analyser);
     } catch (error) {
       alert("Microphone access denied or not available");
       console.error("Recording error:", error);
+      clearInterval(timerIntervalRef.current);
     }
+  };
+
+  const visualizeAudio = (analyser) => {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const updateLevels = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const levels = Array.from(dataArray.slice(0, 40)).map(v => (v / 255) * 100);
+      setAudioLevels(levels);
+      animationIdRef.current = requestAnimationFrame(updateLevels);
+    };
+    updateLevels();
   };
 
   const stopRecording = () => {
@@ -120,24 +157,40 @@ export default function TeacherQuery() {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setRecording(false);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      clearInterval(timerIntervalRef.current);
     }
   };
 
+  const formatTime = (seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
   const handleVoiceQuery = async (audioBlob) => {
-    const userMessage = { role: "user", text: "🎤 Voice message sent", isVoice: true, timestamp: new Date() };
-    const updatedChat = [...currentChat, userMessage];
-    setCurrentChat(updatedChat);
     setLoading(true);
 
     try {
       const audioFile = new File([audioBlob], "recording.webm", { type: "audio/webm" });
       // Send current chat history and session_id for context
-      const result = await api.teacherQueryVoice(audioFile, updatedChat, currentSessionId);
+      const result = await api.teacherQueryVoice(audioFile, currentChat, currentSessionId);
       
       // Store session_id from response
       if (result.session_id && !currentSessionId) {
         setCurrentSessionId(result.session_id);
       }
+      
+      // Add user message with transcribed text
+      const userMessage = {
+        role: "user",
+        text: result.query_text || "Voice message",
+        isVoice: true,
+        timestamp: new Date()
+      };
       
       const aiMessage = { 
         role: "assistant", 
@@ -148,7 +201,7 @@ export default function TeacherQuery() {
         suggestedActions: result.suggested_actions,
         timestamp: new Date()
       };
-      setCurrentChat(prev => [...prev, aiMessage]);
+      setCurrentChat(prev => [...prev, userMessage, aiMessage]);
       
       // Reload chat sessions to show the updated session
       await loadChatSessions();
@@ -350,6 +403,31 @@ export default function TeacherQuery() {
         {currentChat.length > 0 && (
           <div className="border-t border-gray-200 p-8">
             <div className="max-w-4xl mx-auto">
+              {/* Recording Visualization */}
+              {recording && (
+                <div className="flex flex-col gap-3 px-4 py-4 mb-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border border-red-200">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="animate-pulse">
+                      <Mic size={20} className="text-red-500" />
+                    </div>
+                    <span className="text-sm font-semibold text-red-600">Recording</span>
+                    <span className="text-sm font-mono text-red-500">{formatTime(recordingTime)}</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    {audioLevels.map((level, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-gradient-to-t from-red-500 to-red-400 rounded-full transition-all duration-75"
+                        style={{
+                          width: '3px',
+                          height: `${Math.max(8, level / 1.5)}%`,
+                          minHeight: '8px'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleTextQuery} className="flex gap-3 items-end">
                 <input
                   type="text"
@@ -360,11 +438,12 @@ export default function TeacherQuery() {
                   className="flex-1 bg-gray-100 hover:bg-gray-200 focus:bg-white text-gray-900 rounded-full px-6 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 transition-colors"
                 />
                 <button
+                  type="button"
                   onClick={recording ? stopRecording : startRecording}
                   disabled={loading}
-                  className="text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed p-2"
+                  className={`${ recording ? 'bg-red-500 hover:bg-red-600 text-white' : 'text-gray-400 hover:text-gray-600'} disabled:cursor-not-allowed p-3 rounded-full transition-colors flex-shrink-0`}
                 >
-                  <span className="text-xl">{recording ? "⏹" : "🎤"}</span>
+                  {recording ? <Square size={20} /> : <Mic size={20} />}
                 </button>
                 <button
                   type="submit"

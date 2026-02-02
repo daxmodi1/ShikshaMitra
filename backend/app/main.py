@@ -119,12 +119,12 @@ async def teacher_text_query(
     
     # If chat history is provided, populate the memory with it
     if request.chat_history:
-        clear_memory(teacher_id)
+        clear_memory(session_id)
         for msg in request.chat_history:
             if msg.role in ["user", "assistant"]:
-                add_to_memory(teacher_id, msg.role, msg.text)
+                add_to_memory(session_id, msg.role, msg.text)
     
-    response = await run_ai_pipeline(request.query_text, teacher_id)
+    response = await run_ai_pipeline(request.query_text, session_id)
     
     # Save to chat history with session_id
     from app.models import ChatMessage
@@ -150,9 +150,14 @@ async def teacher_text_query(
 async def teacher_voice_query(
     file: UploadFile = File(...),
     chat_history: str = Form(None),
+    session_id: str = Form(None),
     current_user: dict = Depends(get_current_teacher)
 ):
     teacher_id = current_user["user_id"]
+    
+    # Generate session_id if not provided (new chat)
+    if not session_id:
+        session_id = str(uuid.uuid4())
     
     # If chat history is provided, populate the memory with it
     if chat_history:
@@ -179,6 +184,7 @@ async def teacher_voice_query(
     from app.models import ChatMessage as DBChatMessage
     chat_msg = DBChatMessage(
         id=str(uuid.uuid4()),
+        session_id=session_id,
         teacher_id=teacher_id,
         query_text=text,
         answer_text=response.answer_text,
@@ -189,16 +195,23 @@ async def teacher_voice_query(
     )
     save_chat_message(chat_msg)
     
-    return response
+    # Return session_id and query_text with response
+    response_dict = response.dict()
+    response_dict["session_id"] = session_id
+    response_dict["query_text"] = text
+    return response_dict
 
 @app.post("/api/teacher/clear-memory")
 async def clear_conversation_memory(
+    session_id: str = None,
     current_user: dict = Depends(get_current_teacher)
 ):
-    """Clear the conversation buffer memory for the current teacher."""
-    teacher_id = current_user["user_id"]
-    clear_memory(teacher_id)
-    return {"message": "Conversation memory cleared successfully"}
+    """Clear the conversation buffer memory for a specific chat session."""
+    if session_id:
+        clear_memory(session_id)
+        return {"message": f"Conversation memory cleared for session {session_id}"}
+    else:
+        return {"error": "session_id is required"}
 
 @app.get("/api/teacher/history", response_model=List[ChatHistoryResponse])
 async def get_teacher_history(

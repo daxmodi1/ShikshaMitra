@@ -14,10 +14,10 @@ from app.schemas import AIResponse
 
 client = Groq(api_key=settings.GROQ_API_KEY)
 
-# Buffer Memory - stores conversation history per teacher
-# Key: teacher_id, Value: list of {"role": "user"|"assistant", "content": str}
+# Buffer Memory - stores conversation history per chat session
+# Key: session_id, Value: list of {"role": "user"|"assistant", "content": str}
 conversation_memory: Dict[str, List[dict]] = defaultdict(list)
-MAX_MEMORY_MESSAGES = 10  # Keep last 10 exchanges (5 user + 5 assistant)
+MAX_MEMORY_MESSAGES = 10 
 
 ANALYTICS_PROMPT = """
 You are Shiksha Mitra, an AI mentor for teachers.
@@ -60,24 +60,24 @@ async def transcribe_audio(file_bytes: bytes, filename: str) -> str:
         print(f"Whisper Error: {e}")
         return ""
 
-def get_conversation_history(teacher_id: str) -> List[dict]:
-    """Get recent conversation history for a teacher."""
-    return conversation_memory[teacher_id][-MAX_MEMORY_MESSAGES:]
+def get_conversation_history(session_id: str) -> List[dict]:
+    """Get recent conversation history for a chat session."""
+    return conversation_memory[session_id][-MAX_MEMORY_MESSAGES:]
 
-def add_to_memory(teacher_id: str, role: str, content: str):
-    """Add a message to the conversation memory."""
-    conversation_memory[teacher_id].append({"role": role, "content": content})
+def add_to_memory(session_id: str, role: str, content: str):
+    """Add a message to the conversation memory for a specific chat session."""
+    conversation_memory[session_id].append({"role": role, "content": content})
     # Trim to keep only last MAX_MEMORY_MESSAGES
-    if len(conversation_memory[teacher_id]) > MAX_MEMORY_MESSAGES:
-        conversation_memory[teacher_id] = conversation_memory[teacher_id][-MAX_MEMORY_MESSAGES:]
+    if len(conversation_memory[session_id]) > MAX_MEMORY_MESSAGES:
+        conversation_memory[session_id] = conversation_memory[session_id][-MAX_MEMORY_MESSAGES:]
 
-def clear_memory(teacher_id: str):
-    """Clear conversation memory for a teacher."""
-    conversation_memory[teacher_id] = []
+def clear_memory(session_id: str):
+    """Clear conversation memory for a chat session."""
+    conversation_memory[session_id] = []
 
-def build_conversation_summary(teacher_id: str) -> str:
+def build_conversation_summary(session_id: str) -> str:
     """Build a text summary of recent conversation for context."""
-    history = get_conversation_history(teacher_id)
+    history = get_conversation_history(session_id)
     if not history:
         return "No previous conversation."
     
@@ -90,16 +90,16 @@ def build_conversation_summary(teacher_id: str) -> str:
     
     return "\n".join(summary_parts)
 
-async def generate_smart_answer(query: str, context: str, teacher_id: str) -> dict:
+async def generate_smart_answer(query: str, context: str, session_id: str) -> dict:
     # Build conversation summary for context
-    conversation_summary = build_conversation_summary(teacher_id)
+    conversation_summary = build_conversation_summary(session_id)
     formatted_prompt = ANALYTICS_PROMPT.format(context=context, conversation_summary=conversation_summary)
     
     # Build messages with conversation history
     messages = [{"role": "system", "content": formatted_prompt}]
     
     # Add conversation history for context
-    history = get_conversation_history(teacher_id)
+    history = get_conversation_history(session_id)
     messages.extend(history)
     
     # Add current query
@@ -116,8 +116,8 @@ async def generate_smart_answer(query: str, context: str, teacher_id: str) -> di
         result = json.loads(response_content)
         
         # Add to memory
-        add_to_memory(teacher_id, "user", query)
-        add_to_memory(teacher_id, "assistant", result.get("answer", ""))
+        add_to_memory(session_id, "user", query)
+        add_to_memory(session_id, "assistant", result.get("answer", ""))
         
         return result
     except Exception as e:
@@ -130,10 +130,10 @@ async def generate_smart_answer(query: str, context: str, teacher_id: str) -> di
             "actions": []
         }
 
-async def run_ai_pipeline(query_text: str, teacher_id: str) -> AIResponse:
+async def run_ai_pipeline(query_text: str, session_id: str) -> AIResponse:
     # For short/referential queries, include previous query context in RAG search
     search_query = query_text
-    history = get_conversation_history(teacher_id)
+    history = get_conversation_history(session_id)
     
     # If query is short and there's history, combine with previous user query for better RAG
     if len(query_text.split()) <= 5 and history:
@@ -146,7 +146,7 @@ async def run_ai_pipeline(query_text: str, teacher_id: str) -> AIResponse:
     docs = search_ncert(search_query)
     context_str = "\n\n".join(docs)
     
-    ai_data = await generate_smart_answer(query_text, context_str, teacher_id)
+    ai_data = await generate_smart_answer(query_text, context_str, session_id)
     
     return AIResponse(
         answer_text=ai_data.get("answer"),

@@ -10,6 +10,7 @@ class AIResponse(BaseModel):
     detected_topic: str = "General"
     query_sentiment: str = "Neutral"
     detected_language: str = "Unknown"
+    query_text: Optional[str] = None  # For voice queries, return transcribed text
     session_id: Optional[str] = None  # New: return session_id to frontend
 
 class LoginRequest(BaseModel):
