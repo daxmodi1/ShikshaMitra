@@ -54,10 +54,25 @@ class ApiService {
   }
 
   // Auth
+  async getCRPs() {
+    return await this.request('/api/crps', {
+      method: 'GET',
+    });
+  }
+
   async login(email, password) {
     const response = await this.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+    this.setToken(response.access_token);
+    return response;
+  }
+
+  async signup(userData) {
+    const response = await this.request('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(userData),
     });
     this.setToken(response.access_token);
     return response;
@@ -69,20 +84,24 @@ class ApiService {
   }
 
   // Teacher APIs
-  async teacherQueryText(queryText, chatHistory = []) {
+  async teacherQueryText(queryText, chatHistory = [], sessionId = null) {
     return await this.request('/api/teacher/query', {
       method: 'POST',
       body: JSON.stringify({ 
         query_text: queryText,
-        chat_history: chatHistory 
+        chat_history: chatHistory,
+        session_id: sessionId
       }),
     });
   }
 
-  async teacherQueryVoice(audioFile, chatHistory = []) {
+  async teacherQueryVoice(audioFile, chatHistory = [], sessionId = null) {
     const formData = new FormData();
     formData.append('file', audioFile);
     formData.append('chat_history', JSON.stringify(chatHistory));
+    if (sessionId) {
+      formData.append('session_id', sessionId);
+    }
 
     const url = `${API_BASE_URL}/api/teacher/query-voice`;
     const response = await fetch(url, {
@@ -103,6 +122,10 @@ class ApiService {
 
   async getTeacherHistory() {
     return await this.request('/api/teacher/history');
+  }
+
+  async getTeacherSessions() {
+    return await this.request('/api/teacher/sessions');
   }
 
   async clearConversationMemory() {

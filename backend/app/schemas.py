@@ -10,10 +10,21 @@ class AIResponse(BaseModel):
     detected_topic: str = "General"
     query_sentiment: str = "Neutral"
     detected_language: str = "Unknown"
+    session_id: Optional[str] = None  # New: return session_id to frontend
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str  # "crp" or "teacher"
+    grade: Optional[str] = None
+    subject: Optional[str] = None
+    location: Optional[str] = None
+    crp_id: Optional[str] = None  # For teachers
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -32,6 +43,7 @@ class ChatMessage(BaseModel):
 class QueryRequest(BaseModel):
     query_text: str
     chat_history: Optional[List[ChatMessage]] = None
+    session_id: Optional[str] = None  # New: track conversation session
     
 class ChatHistoryResponse(BaseModel):
     id: str

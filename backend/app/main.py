@@ -6,7 +6,7 @@ import uuid
 
 from app.config import settings
 from app.schemas import (
-    AIResponse, LoginRequest, LoginResponse, QueryRequest, 
+    AIResponse, LoginRequest, LoginResponse, SignupRequest, QueryRequest, 
     ChatHistoryResponse, TeacherProfileResponse
 )
 from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline, clear_memory, add_to_memory
@@ -17,7 +17,7 @@ from app.auth import (
 from app.database import (
     get_user_by_email, get_teacher_by_id, get_teachers_by_crp,
     save_chat_message, get_teacher_chat_history, get_crp_chat_history,
-    get_crp_analytics, teachers_db
+    get_crp_analytics
 )
 from app.models import ChatMessage
 
@@ -37,6 +37,54 @@ def root():
     return {"message": "Shiksha Mitra Backend is Running"}
 
 # Authentication Endpoints
+@app.get("/api/crps")
+async def get_crps():
+    """Get all CRPs for teacher signup dropdown"""
+    from app.database import get_all_crps
+    crps = get_all_crps()
+    return [{"id": crp.id, "name": crp.name, "email": crp.email} for crp in crps]
+
+@app.post("/api/auth/signup")
+async def signup(request: SignupRequest):
+    """Register a new user (CRP or Teacher)"""
+    from app.database import create_user
+    
+    # Check if email already exists
+    existing_user = get_user_by_email(request.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Validate role
+    if request.role not in ["crp", "teacher"]:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'crp' or 'teacher'")
+    
+    # Create user
+    user = create_user(
+        email=request.email,
+        password=request.password,
+        name=request.name,
+        role=request.role,
+        grade=request.grade,
+        subject=request.subject,
+        location=request.location,
+        crp_id=request.crp_id
+    )
+    
+    # Generate access token
+    access_token = create_access_token(
+        data={"sub": user.id, "email": user.email, "role": user.role},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return LoginResponse(
+        access_token=access_token,
+        user_id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        crp_id=user.crp_id
+    )
+
 @app.post("/api/auth/login", response_model=LoginResponse)
 async def login(credentials: LoginRequest):
     user = get_user_by_email(credentials.email)
@@ -66,6 +114,9 @@ async def teacher_text_query(
 ):
     teacher_id = current_user["user_id"]
     
+    # Generate session_id if not provided (new chat)
+    session_id = request.session_id or str(uuid.uuid4())
+    
     # If chat history is provided, populate the memory with it
     if request.chat_history:
         clear_memory(teacher_id)
@@ -75,10 +126,11 @@ async def teacher_text_query(
     
     response = await run_ai_pipeline(request.query_text, teacher_id)
     
-    # Save to chat history
+    # Save to chat history with session_id
     from app.models import ChatMessage
     chat_msg = ChatMessage(
         id=str(uuid.uuid4()),
+        session_id=session_id,
         teacher_id=teacher_id,
         query_text=request.query_text,
         answer_text=response.answer_text,
@@ -89,7 +141,10 @@ async def teacher_text_query(
     )
     save_chat_message(chat_msg)
     
-    return response
+    # Return session_id with response
+    response_dict = response.dict()
+    response_dict["session_id"] = session_id
+    return response_dict
 
 @app.post("/api/teacher/query-voice", response_model=AIResponse)
 async def teacher_voice_query(
@@ -169,6 +224,16 @@ async def get_teacher_history(
         for msg in history
     ]
 
+@app.get("/api/teacher/sessions")
+async def get_teacher_sessions(
+    current_user: dict = Depends(get_current_teacher)
+):
+    """Get all chat sessions grouped by session_id"""
+    from app.database import get_teacher_sessions
+    teacher_id = current_user["user_id"]
+    sessions = get_teacher_sessions(teacher_id)
+    return sessions
+
 @app.get("/api/teacher/profile", response_model=TeacherProfileResponse)
 async def get_teacher_profile(
     current_user: dict = Depends(get_current_teacher)
@@ -197,7 +262,7 @@ async def get_crp_chats(
         ChatHistoryResponse(
             id=msg.id,
             teacher_id=msg.teacher_id,
-            teacher_name=teachers_db.get(msg.teacher_id).name if teachers_db.get(msg.teacher_id) else "Unknown",
+            teacher_name=get_teacher_by_id(msg.teacher_id).name if get_teacher_by_id(msg.teacher_id) else "Unknown",
             query_text=msg.query_text,
             answer_text=msg.answer_text,
             detected_topic=msg.detected_topic,

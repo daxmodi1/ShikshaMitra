@@ -8,11 +8,11 @@ export default function TeacherQuery() {
   const [queryText, setQueryText] = useState("");
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatSessions, setChatSessions] = useState([]);
   const [currentChat, setCurrentChat] = useState([]);
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentChatId, setCurrentChatId] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -24,66 +24,26 @@ export default function TeacherQuery() {
       setUser(JSON.parse(userData));
     }
     
-    // Load current chat from localStorage
-    const savedChat = localStorage.getItem('currentChat');
-    if (savedChat) {
-      try {
-        setCurrentChat(JSON.parse(savedChat));
-      } catch (error) {
-        console.error('Failed to load chat:', error);
-      }
-    }
-
-    // Load all chat history
-    const savedHistory = localStorage.getItem('chatHistory');
-    if (savedHistory) {
-      try {
-        setChatHistory(JSON.parse(savedHistory));
-      } catch (error) {
-        console.error('Failed to load history:', error);
-      }
-    }
-
-    // Load current chat ID
-    const savedChatId = localStorage.getItem('currentChatId');
-    if (savedChatId) {
-      setCurrentChatId(savedChatId);
-    }
+    // Clear old localStorage chat data - we now use database with sessions
+    localStorage.removeItem('currentChat');
+    localStorage.removeItem('chatHistory');
+    localStorage.removeItem('currentChatId');
+    
+    // Load chat sessions from database
+    loadChatSessions();
   }, []);
+
+  const loadChatSessions = async () => {
+    try {
+      const sessions = await api.getTeacherSessions();
+      setChatSessions(sessions);
+    } catch (error) {
+      console.error('Failed to load chat sessions:', error);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentChat]);
-
-  // Save chat to localStorage whenever it changes
-  useEffect(() => {
-    if (currentChat.length > 0) {
-      localStorage.setItem('currentChat', JSON.stringify(currentChat));
-      
-      // Update the chat in history
-      const chatId = currentChatId || `chat-${Date.now()}`;
-      if (!currentChatId) {
-        setCurrentChatId(chatId);
-        localStorage.setItem('currentChatId', chatId);
-      }
-
-      const chatSummary = {
-        id: chatId,
-        query_text: currentChat[0]?.text || 'New Chat',
-        answer_text: currentChat[currentChat.length - 1]?.text || '',
-        timestamp: new Date().toISOString(),
-        detected_topic: currentChat.find(m => m.role === 'assistant')?.topic || '',
-        query_sentiment: currentChat.find(m => m.role === 'assistant')?.sentiment || '',
-        detected_language: currentChat.find(m => m.role === 'assistant')?.language || '',
-        messages: currentChat
-      };
-
-      // Update chat history
-      const updatedHistory = chatHistory.filter(c => c.id !== chatId);
-      updatedHistory.unshift(chatSummary);
-      setChatHistory(updatedHistory);
-      localStorage.setItem('chatHistory', JSON.stringify(updatedHistory));
-    }
   }, [currentChat]);
 
   const handleTextQuery = async (e) => {
@@ -96,8 +56,14 @@ export default function TeacherQuery() {
     setLoading(true);
 
     try {
-      // Send current chat history along with the query for context
-      const result = await api.teacherQueryText(queryText, currentChat);
+      // Send current chat history and session_id for context
+      const result = await api.teacherQueryText(queryText, currentChat, currentSessionId);
+      
+      // Store session_id from response
+      if (result.session_id && !currentSessionId) {
+        setCurrentSessionId(result.session_id);
+      }
+      
       const aiMessage = { 
         role: "assistant", 
         text: result.answer_text,
@@ -108,6 +74,9 @@ export default function TeacherQuery() {
         timestamp: new Date()
       };
       setCurrentChat(prev => [...prev, aiMessage]);
+      
+      // Reload chat sessions to show the updated session
+      await loadChatSessions();
     } catch (error) {
       const errorMessage = { 
         role: "assistant", 
@@ -162,8 +131,14 @@ export default function TeacherQuery() {
 
     try {
       const audioFile = new File([audioBlob], "recording.webm", { type: "audio/webm" });
-      // Send current chat history along with voice query for context
-      const result = await api.teacherQueryVoice(audioFile, updatedChat);
+      // Send current chat history and session_id for context
+      const result = await api.teacherQueryVoice(audioFile, updatedChat, currentSessionId);
+      
+      // Store session_id from response
+      if (result.session_id && !currentSessionId) {
+        setCurrentSessionId(result.session_id);
+      }
+      
       const aiMessage = { 
         role: "assistant", 
         text: result.answer_text,
@@ -174,6 +149,9 @@ export default function TeacherQuery() {
         timestamp: new Date()
       };
       setCurrentChat(prev => [...prev, aiMessage]);
+      
+      // Reload chat sessions to show the updated session
+      await loadChatSessions();
     } catch (error) {
       const errorMessage = { 
         role: "assistant", 
@@ -191,29 +169,25 @@ export default function TeacherQuery() {
 
   const startNewChat = () => {
     setCurrentChat([]);
-    setCurrentChatId(null);
-    localStorage.removeItem('currentChat');
-    localStorage.removeItem('currentChatId');
+    setCurrentSessionId(null); // Clear session to create new one
   };
 
-  const loadChatSession = (chat) => {
-    if (chat.messages) {
-      setCurrentChat(chat.messages);
-    } else {
-      setCurrentChat([
-        { role: "user", text: chat.query_text, timestamp: new Date(chat.timestamp) },
-        { 
-          role: "assistant", 
-          text: chat.answer_text,
-          topic: chat.detected_topic,
-          sentiment: chat.query_sentiment,
-          language: chat.detected_language,
-          timestamp: new Date(chat.timestamp)
-        }
-      ]);
-    }
-    setCurrentChatId(chat.id);
-    localStorage.setItem('currentChatId', chat.id);
+  const loadChatSession = (session) => {
+    // Convert session messages to chat format
+    const messages = [];
+    session.messages.forEach(msg => {
+      messages.push({ role: "user", text: msg.query_text, timestamp: new Date(msg.timestamp) });
+      messages.push({ 
+        role: "assistant", 
+        text: msg.answer_text,
+        topic: msg.detected_topic,
+        sentiment: msg.query_sentiment,
+        language: msg.detected_language,
+        timestamp: new Date(msg.timestamp)
+      });
+    });
+    setCurrentChat(messages);
+    setCurrentSessionId(session.session_id);
   };
 
   const handleLogout = () => {
@@ -225,10 +199,10 @@ export default function TeacherQuery() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const getChatPreview = (chat) => {
-    const query = chat.query_text.length > 30 
-      ? chat.query_text.substring(0, 30) + "..." 
-      : chat.query_text;
+  const getChatPreview = (session) => {
+    const query = session.first_query && session.first_query.length > 30 
+      ? session.first_query.substring(0, 30) + "..." 
+      : session.first_query || "New Chat";
     return query;
   };
 
@@ -256,23 +230,23 @@ export default function TeacherQuery() {
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Recent Chats</p>
           <div className="space-y-1">
-            {chatHistory.length === 0 ? (
+            {chatSessions.length === 0 ? (
               <p className="text-gray-400 text-xs text-center py-4">No chats yet</p>
             ) : (
-              chatHistory.map((chat, idx) => (
+              chatSessions.map((session, idx) => (
                 <button
-                  key={idx}
-                  onClick={() => loadChatSession(chat)}
+                  key={session.session_id}
+                  onClick={() => loadChatSession(session)}
                   className={`w-full text-left p-2 rounded-lg text-sm transition-colors ${
-                    currentChatId === chat.id 
+                    currentSessionId === session.session_id 
                       ? 'bg-gray-100 text-gray-900 font-medium' 
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
-                  title={chat.query_text}
+                  title={session.first_query}
                 >
                   <div className="flex items-start gap-2">
                     <MessageCircle size={14} className="flex-shrink-0 mt-1 text-gray-500" />
-                    <p className="truncate text-xs">{getChatPreview(chat)}</p>
+                    <p className="truncate text-xs">{getChatPreview(session)}</p>
                   </div>
                 </button>
               ))

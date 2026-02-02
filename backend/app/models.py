@@ -30,6 +30,7 @@ class Teacher(BaseModel):
 
 class ChatMessage(BaseModel):
     id: str
+    session_id: str  # New: groups messages into conversations
     teacher_id: str
     query_text: str
     answer_text: str

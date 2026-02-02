@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     STT_MODEL: str = "whisper-large-v3-turbo"
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
+    # Supabase (Postgres)
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+
     class Config:
         env_file = ".env"
 
