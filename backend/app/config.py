@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
+    # Twilio WhatsApp Sandbox
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_WHATSAPP_NUMBER: str = "whatsapp:+14155238886"  # Twilio Sandbox number
+
     class Config:
         env_file = ".env"
 

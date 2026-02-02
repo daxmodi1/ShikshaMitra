@@ -1,4 +1,5 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 from typing import List
@@ -20,6 +21,8 @@ from app.database import (
     get_crp_analytics
 )
 from app.models import ChatMessage
+from app.whatsapp import handle_whatsapp_message
+from twilio.twiml.messaging_response import MessagingResponse
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -329,3 +332,61 @@ async def ingest_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
         
     return await ingest_pdf_pipeline(file)
+
+# WhatsApp Webhook Endpoint (Twilio Sandbox)
+@app.post("/api/whatsapp/webhook")
+async def whatsapp_webhook(request: Request):
+    """
+    Twilio WhatsApp webhook endpoint
+    Receives incoming messages from WhatsApp users
+    """
+    try:
+        # Parse form data from Twilio
+        form_data = await request.form()
+        
+        from_number = form_data.get("From")  # Format: whatsapp:+1234567890
+        message_body = form_data.get("Body", "").strip()
+        
+        print(f"[WhatsApp] Received from {from_number}: {message_body}")
+        
+        if not from_number or not message_body:
+            print("[WhatsApp] Missing from_number or message_body")
+            resp = MessagingResponse()
+            return str(resp)
+        
+        # Process message through AI pipeline
+        response_text = await handle_whatsapp_message(from_number, message_body)
+        print(f"[WhatsApp] Responding: {response_text}")
+        
+        # Create TwiML response
+        resp = MessagingResponse()
+        resp.message(response_text)
+        
+        # Return with proper TwiML content type
+        return Response(content=str(resp), media_type="application/xml")
+    
+    except Exception as e:
+        print(f"[WhatsApp] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        resp = MessagingResponse()
+        resp.message("Sorry, something went wrong. Please try again.")
+        return Response(content=str(resp), media_type="application/xml")
+
+@app.get("/api/whatsapp/status")
+async def whatsapp_status():
+    """Check if WhatsApp integration is configured"""
+    from app.whatsapp import get_twilio_client
+    client = get_twilio_client()
+    
+    if client:
+        return {
+            "status": "configured",
+            "sandbox_number": settings.TWILIO_WHATSAPP_NUMBER,
+            "message": "WhatsApp integration is active"
+        }
+    else:
+        return {
+            "status": "not_configured",
+            "message": "Twilio credentials not set in environment variables"
+        }
