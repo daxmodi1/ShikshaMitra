@@ -14,7 +14,7 @@ export default function Home() {
             <span className="text-xl font-bold text-gray-900">Shiksha Mitra</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:flex items-center gap-8">
             <a href="#home" className="text-gray-700 hover:text-blue-600 font-medium">
               Home
             </a>
@@ -23,9 +23,6 @@ export default function Home() {
             </a>
             <a href="#features" className="text-gray-700 hover:text-blue-600 font-medium">
               Features
-            </a>
-            <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium">
-              Pricing
             </a>
           </div>
 
@@ -44,7 +41,7 @@ export default function Home() {
         {/* Badge */}
         <div className="inline-block bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
           <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-          Early Access: Get Started Free Today
+          Empowering Teachers with AI
         </div>
 
         {/* Main Headline */}
@@ -224,7 +221,6 @@ export default function Home() {
               <h4 className="text-white font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li><a href="#" className="hover:text-white transition">Features</a></li>
-                <li><a href="#" className="hover:text-white transition">Pricing</a></li>
                 <li><a href="#" className="hover:text-white transition">Security</a></li>
               </ul>
             </div>

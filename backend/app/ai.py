@@ -109,7 +109,7 @@ async def generate_smart_answer(query: str, context: str, teacher_id: str) -> di
         chat = client.chat.completions.create(
             messages=messages,
             model=settings.LLM_MODEL,
-            temperature=0.3,
+            temperature=0.7,
             response_format={"type": "json_object"}
         )
         response_content = chat.choices[0].message.content

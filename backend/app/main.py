@@ -9,7 +9,7 @@ from app.schemas import (
     AIResponse, LoginRequest, LoginResponse, QueryRequest, 
     ChatHistoryResponse, TeacherProfileResponse
 )
-from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline, clear_memory
+from app.ai import run_ai_pipeline, transcribe_audio, ingest_pdf_pipeline, clear_memory, add_to_memory
 from app.auth import (
     verify_password, create_access_token, get_current_user, 
     get_current_crp, get_current_teacher, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -65,9 +65,18 @@ async def teacher_text_query(
     current_user: dict = Depends(get_current_teacher)
 ):
     teacher_id = current_user["user_id"]
+    
+    # If chat history is provided, populate the memory with it
+    if request.chat_history:
+        clear_memory(teacher_id)
+        for msg in request.chat_history:
+            if msg.role in ["user", "assistant"]:
+                add_to_memory(teacher_id, msg.role, msg.text)
+    
     response = await run_ai_pipeline(request.query_text, teacher_id)
     
     # Save to chat history
+    from app.models import ChatMessage
     chat_msg = ChatMessage(
         id=str(uuid.uuid4()),
         teacher_id=teacher_id,
@@ -85,9 +94,24 @@ async def teacher_text_query(
 @app.post("/api/teacher/query-voice", response_model=AIResponse)
 async def teacher_voice_query(
     file: UploadFile = File(...),
+    chat_history: str = Form(None),
     current_user: dict = Depends(get_current_teacher)
 ):
     teacher_id = current_user["user_id"]
+    
+    # If chat history is provided, populate the memory with it
+    if chat_history:
+        try:
+            import json
+            history_list = json.loads(chat_history)
+            clear_memory(teacher_id)
+            from app.schemas import ChatMessage
+            for msg in history_list:
+                if isinstance(msg, dict) and msg.get("role") in ["user", "assistant"]:
+                    add_to_memory(teacher_id, msg.get("role"), msg.get("text", ""))
+        except:
+            pass
+    
     file_bytes = await file.read()
     text = await transcribe_audio(file_bytes, file.filename)
     
@@ -97,7 +121,8 @@ async def teacher_voice_query(
     response = await run_ai_pipeline(text, teacher_id)
     
     # Save to chat history
-    chat_msg = ChatMessage(
+    from app.models import ChatMessage as DBChatMessage
+    chat_msg = DBChatMessage(
         id=str(uuid.uuid4()),
         teacher_id=teacher_id,
         query_text=text,

@@ -24,8 +24,14 @@ class LoginResponse(BaseModel):
     role: str
     crp_id: Optional[str] = None
 
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    text: str
+    timestamp: Optional[datetime] = None
+
 class QueryRequest(BaseModel):
     query_text: str
+    chat_history: Optional[List[ChatMessage]] = None
     
 class ChatHistoryResponse(BaseModel):
     id: str
