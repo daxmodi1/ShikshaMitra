@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, MessageCircle, ChevronDown, Mic, Square } from "lucide-react";
 import api from "../services/api";
+import { renderFormattedResponse } from "../utils/textFormatting.jsx";
 
 export default function TeacherQuery() {
   const navigate = useNavigate();
@@ -371,10 +372,12 @@ export default function TeacherQuery() {
                     className={`max-w-2xl ${
                       msg.role === 'user'
                         ? 'bg-blue-600 text-white rounded-3xl rounded-br-none'
-                        : 'text-gray-900'
-                    } p-4 rounded-lg`}
+                        : 'bg-gray-100 text-gray-900 rounded-lg rounded-tl-none'
+                    } p-4`}
                   >
-                    <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.text}</p>
+                    <div className="space-y-2">
+                      {renderFormattedResponse(msg.text)}
+                    </div>
                     {msg.role === 'assistant' && msg.topic && (
                       <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-300">
                         <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">📚 {msg.topic}</span>

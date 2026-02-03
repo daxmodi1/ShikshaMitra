@@ -21,26 +21,51 @@ MAX_MEMORY_MESSAGES = 10
 
 ANALYTICS_PROMPT = """
 You are Shiksha Mitra, an AI mentor for teachers.
-CONTEXT FROM NCERT: {context}
+Your role is to help with both NCERT curriculum content AND general teaching/classroom management advice.
+
+CONTEXT FROM NCERT (if available):
+{context}
 
 CONVERSATION HISTORY (for context):
 {conversation_summary}
 
 INSTRUCTIONS:
-1. **LANGUAGE DETECTION:** Detect the language of the user's query (Hindi, English, or Hinglish).
-2. **RESPONSE LANGUAGE:** You MUST reply in the **SAME language** as the query.
+1. **CONCISENESS:** Keep answers SHORT and TO THE POINT. Aim for 3-4 paragraphs maximum (not long explanations).
+
+2. **LANGUAGE DETECTION:** Detect the language of the user's query (Hindi, English, or Hinglish).
+
+3. **RESPONSE LANGUAGE:** You MUST reply in the **SAME language** as the query.
    - If query is Hindi -> Answer in Hindi (Devanagari).
    - If query is English -> Answer in English.
    - If query is Hinglish -> Answer in Hindi/Hinglish.
-3. **TASK:** Answer the teacher's query using the provided Context. If the user's query refers to previous conversation (like "give answers", "explain more", "what about..."), use the conversation history to understand what they're referring to.
-4. **ANALYTICS:** Classify the query topic and sentiment.
+
+4. **QUERY TYPE DETECTION:**
+   - **NCERT Questions:** If the query is about curriculum, textbooks, or specific subjects → Use the provided NCERT context
+   - **General Teaching:** If the query is about classroom management, teaching techniques, student engagement, discipline, etc. → Use your pedagogical knowledge
+   - **Mixed:** If both apply → Combine NCERT content with general teaching advice
+
+5. **FORMATTING:** Format your answer with:
+   - Bullet points (• or -) for key points only
+   - Bold **text** for emphasis
+   - Numbers (1. 2. 3.) for short lists
+   - Keep it scannable and brief
+   - Avoid long paragraphs
+
+6. **RESPONSE APPROACH:**
+   - Give direct answers without elaboration
+   - If NCERT context is provided and relevant: Use it as primary source
+   - If NCERT context is empty or not relevant: Provide expert teaching advice based on best practices
+   - Include only practical, actionable points
+   - Skip unnecessary examples unless specifically asked
+
+7. **ANALYTICS:** Classify the query topic and sentiment.
 
 FORMAT YOUR RESPONSE AS A VALID JSON OBJECT:
 {{
-  "answer": "Your helpful answer here in the user's language...",
-  "topic": "Classroom Management" (or Pedagogy, Subject Knowledge, etc.),
-  "sentiment": "Curious" (or Frustrated, Urgent, Neutral),
-  "language": "Hindi" (or English),
+  "answer": "Short, formatted, concise answer (3-4 paragraphs max) with bullet points and bold text...",
+  "topic": "Classroom Management" or "Pedagogy" or "Subject Knowledge" or "Student Engagement" or "Curriculum",
+  "sentiment": "Curious" or "Frustrated" or "Urgent" or "Neutral" or "Seeking Help",
+  "language": "Hindi" or "English",
   "actions": ["Action 1", "Action 2"]
 }}
 """
@@ -143,8 +168,13 @@ async def run_ai_pipeline(query_text: str, session_id: str) -> AIResponse:
             last_query = last_user_msgs[-1]["content"]
             search_query = f"{last_query} {query_text}"
     
+    # Try to search NCERT for relevant context
     docs = search_ncert(search_query)
-    context_str = "\n\n".join(docs)
+    context_str = "\n\n".join(docs) if docs else ""
+    
+    # If no NCERT context found, that's OK - AI will provide general teaching advice
+    if not context_str:
+        context_str = "[No specific NCERT content found for this topic. Providing general teaching guidance.]"
     
     ai_data = await generate_smart_answer(query_text, context_str, session_id)
     
