@@ -1,13 +1,15 @@
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 from app.config import settings
-from app.ai import run_ai_pipeline, add_to_memory
+from app.ai import run_ai_pipeline, add_to_memory, transcribe_audio
 from app.database import get_user_by_email, save_chat_message, get_teacher_by_id
 from app.models import ChatMessage
 from app.auth import verify_password
 from typing import Dict
 import uuid
 from datetime import datetime
+import httpx
+import io
 
 # Initialize Twilio client
 def get_twilio_client():
@@ -162,6 +164,82 @@ async def handle_whatsapp_message(from_number: str, message_body: str) -> str:
         import traceback
         traceback.print_exc()
         return "क्षमा करें, कुछ त्रुटि हुई। /login से दोबारा शुरू करें।\n\nError occurred. Try /login again."
+
+async def handle_whatsapp_voice(from_number: str, media_url: str, media_type: str) -> str:
+    """
+    Process incoming WhatsApp voice message
+    Downloads audio from Twilio URL, transcribes it, and processes as text query
+    """
+    try:
+        session = get_or_create_session(from_number)
+        logged_in = session["logged_in"]
+        teacher_id = session["teacher_id"]
+        
+        print(f"[WhatsApp Voice] From: {from_number} | Logged in: {logged_in}")
+        
+        # Require login
+        if not logged_in:
+            return "🔐 प्रश्न पूछने के लिए पहले लॉगिन करें: /login\n\nPlease login first: /login"
+        
+        # Download audio from Twilio URL
+        print(f"[WhatsApp Voice] Downloading from: {media_url}")
+        async with httpx.AsyncClient() as client:
+            # Add Twilio auth to the request
+            auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            response = await client.get(media_url, auth=auth)
+            if response.status_code != 200:
+                print(f"[WhatsApp Voice] Failed to download: {response.status_code}")
+                return "माफ करें, आवाज़ डाउनलोड में समस्या हुई।\n\nError downloading voice message."
+            
+            audio_bytes = response.content
+        
+        print(f"[WhatsApp Voice] Downloaded {len(audio_bytes)} bytes")
+        
+        # Transcribe audio
+        try:
+            audio_file = io.BytesIO(audio_bytes)
+            audio_file.name = "whatsapp_voice.ogg"
+            transcribed_text = await transcribe_audio(audio_file)
+            print(f"[WhatsApp Voice] Transcribed: {transcribed_text}")
+        except Exception as trans_err:
+            print(f"[WhatsApp Voice] Transcription error: {trans_err}")
+            return "माफ करें, आवाज़ समझ नहीं आई।\n\nCould not understand the voice message."
+        
+        if not transcribed_text or not transcribed_text.strip():
+            return "कोई आवाज़ नहीं सुनी गई।\n\nNo audio detected."
+        
+        # Process transcribed text as query
+        session_id = session["session_id"]
+        print(f"[WhatsApp Voice] Processing query from teacher {teacher_id}, session {session_id}")
+        
+        response = await run_ai_pipeline(transcribed_text, session_id)
+        print(f"[WhatsApp Voice] AI Response ready")
+        
+        # Save to database
+        try:
+            chat_msg = ChatMessage(
+                id=str(uuid.uuid4()),
+                session_id=session_id,
+                teacher_id=teacher_id,
+                query_text=transcribed_text,
+                answer_text=response.answer_text,
+                detected_topic=response.detected_topic,
+                query_sentiment=response.query_sentiment,
+                detected_language=response.detected_language,
+                source_type="whatsapp"
+            )
+            save_chat_message(chat_msg)
+            print(f"[WhatsApp Voice] Saved to database for teacher {teacher_id}")
+        except Exception as db_err:
+            print(f"[WhatsApp Voice] DB save error: {db_err}")
+        
+        return response.answer_text
+        
+    except Exception as e:
+        print(f"[WhatsApp Voice] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return "क्षमा करें, कुछ त्रुटि हुई।\n\nError processing voice message."
 
 def send_whatsapp_message(to_number: str, message: str) -> bool:
     """

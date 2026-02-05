@@ -21,7 +21,7 @@ from app.database import (
     get_crp_analytics
 )
 from app.models import ChatMessage
-from app.whatsapp import handle_whatsapp_message
+from app.whatsapp import handle_whatsapp_message, handle_whatsapp_voice
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -338,7 +338,7 @@ async def ingest_pdf(file: UploadFile = File(...)):
 async def whatsapp_webhook(request: Request):
     """
     Twilio WhatsApp webhook endpoint
-    Receives incoming messages from WhatsApp users
+    Receives incoming messages from WhatsApp users (text or voice)
     """
     try:
         # Parse form data from Twilio
@@ -346,16 +346,29 @@ async def whatsapp_webhook(request: Request):
         
         from_number = form_data.get("From")  # Format: whatsapp:+1234567890
         message_body = form_data.get("Body", "").strip()
+        num_media = int(form_data.get("NumMedia", 0))
         
-        print(f"[WhatsApp] Received from {from_number}: {message_body}")
+        print(f"[WhatsApp] Received from {from_number} | Text: {message_body} | Media: {num_media}")
         
-        if not from_number or not message_body:
-            print("[WhatsApp] Missing from_number or message_body")
+        if not from_number:
+            print("[WhatsApp] Missing from_number")
             resp = MessagingResponse()
             return str(resp)
         
-        # Process message through AI pipeline
-        response_text = await handle_whatsapp_message(from_number, message_body)
+        # Handle voice message
+        if num_media > 0:
+            media_url = form_data.get("MediaUrl0")  # First media item
+            media_type = form_data.get("MediaContentType0", "")  # e.g., audio/ogg
+            print(f"[WhatsApp] Voice message detected | Type: {media_type} | URL: {media_url}")
+            response_text = await handle_whatsapp_voice(from_number, media_url, media_type)
+        elif message_body:
+            # Process text message
+            response_text = await handle_whatsapp_message(from_number, message_body)
+        else:
+            print("[WhatsApp] Missing content")
+            resp = MessagingResponse()
+            return str(resp)
+        
         print(f"[WhatsApp] Responding: {response_text}")
         
         # Create TwiML response
