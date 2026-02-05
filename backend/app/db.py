@@ -4,6 +4,8 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
 from app.config import settings
+from difflib import SequenceMatcher
+import re
 
 ensemble_retriever = None
 
@@ -47,10 +49,31 @@ def search_ncert(query_text: str):
     if not ensemble_retriever:
         initialize_retriever()
         if not ensemble_retriever: return []
-
+    
+    print(f"[RAG] Original query: {query_text}")
+    
+    # Try primary search first
     docs = ensemble_retriever.invoke(query_text)
     
-    return [d.page_content for d in docs]
+    # If no results found, try fuzzy matching on key words
+    if not docs or len(docs) == 0:
+        print(f"[RAG] No results found. Attempting fuzzy matching...")
+        # Extract key words (longer words, likely nouns/important terms)
+        words = query_text.lower().split()
+        key_words = [w for w in words if len(w) > 3]
+        
+        if key_words:
+            # Try searching with each keyword individually
+            for keyword in key_words:
+                print(f"[RAG] Trying fuzzy search with keyword: {keyword}")
+                docs = ensemble_retriever.invoke(keyword)
+                if docs:
+                    print(f"[RAG] Found {len(docs)} results with keyword '{keyword}'")
+                    break
+    
+    result = [d.page_content for d in docs] if docs else []
+    print(f"[RAG] Final results: {len(result)} documents found")
+    return result
 
 def insert_documents(texts: list, metadatas: list):
     docs = [Document(page_content=t, metadata=m) for t, m in zip(texts, metadatas)]

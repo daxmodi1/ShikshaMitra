@@ -30,14 +30,21 @@ CONVERSATION HISTORY (for context):
 {conversation_summary}
 
 INSTRUCTIONS:
-1. **CONCISENESS:** Keep answers SHORT and TO THE POINT. Aim for 3-4 paragraphs maximum (not long explanations).
+1. **CONCISENESS (MOST IMPORTANT):** 
+   - KEEP ANSWERS VERY SHORT AND DIRECT
+   - Maximum 2-3 short paragraphs (80-120 words total)
+   - Hindi answers should be as concise as English answers
+   - Do NOT repeat information
+   - Do NOT add extra examples unless asked
+   - Use bullet points instead of lengthy paragraphs
 
 2. **LANGUAGE DETECTION:** Detect the language of the user's query (Hindi, English, or Hinglish).
 
 3. **RESPONSE LANGUAGE:** You MUST reply in the **SAME language** as the query.
-   - If query is Hindi -> Answer in Hindi (Devanagari).
-   - If query is English -> Answer in English.
-   - If query is Hinglish -> Answer in Hindi/Hinglish.
+   - If query is Hindi -> Answer in Hindi (Devanagari)
+   - If query is English -> Answer in English
+   - If query is Hinglish -> Answer in Hindi/Hinglish
+   - **IMPORTANT:** Same conciseness rules apply to ALL languages
 
 4. **QUERY TYPE DETECTION:**
    - **NCERT Questions:** If the query is about curriculum, textbooks, or specific subjects → Use the provided NCERT context
@@ -47,7 +54,7 @@ INSTRUCTIONS:
 5. **FORMATTING:** Format your answer with:
    - Bullet points (• or -) for key points only
    - Bold **text** for emphasis
-   - Numbers (1. 2. 3.) for short lists
+   - Numbers (1. 2. 3.) for short lists only
    - Keep it scannable and brief
    - Avoid long paragraphs
 
@@ -57,12 +64,13 @@ INSTRUCTIONS:
    - If NCERT context is empty or not relevant: Provide expert teaching advice based on best practices
    - Include only practical, actionable points
    - Skip unnecessary examples unless specifically asked
+   - NO lengthy explanations - be brief and to the point
 
 7. **ANALYTICS:** Classify the query topic and sentiment.
 
 FORMAT YOUR RESPONSE AS A VALID JSON OBJECT:
 {{
-  "answer": "Short, formatted, concise answer (3-4 paragraphs max) with bullet points and bold text...",
+  "answer": "Brief, formatted answer (2-3 short paragraphs max, 80-120 words) with bullet points and bold text...",
   "topic": "Classroom Management" or "Pedagogy" or "Subject Knowledge" or "Student Engagement" or "Curriculum",
   "sentiment": "Curious" or "Frustrated" or "Urgent" or "Neutral" or "Seeking Help",
   "language": "Hindi" or "English",
@@ -80,7 +88,12 @@ async def transcribe_audio(file_bytes: bytes, filename: str) -> str:
             model=settings.STT_MODEL,
             temperature=0.0
         )
-        return transcription.text
+        transcribed_text = transcription.text.strip()
+        
+        # Debug logging
+        print(f"[Transcription] File: {filename} | Text: {transcribed_text}")
+        
+        return transcribed_text
     except Exception as e:
         print(f"Whisper Error: {e}")
         return ""
@@ -134,7 +147,7 @@ async def generate_smart_answer(query: str, context: str, session_id: str) -> di
         chat = client.chat.completions.create(
             messages=messages,
             model=settings.LLM_MODEL,
-            temperature=0.7,
+            temperature=0.5,
             response_format={"type": "json_object"}
         )
         response_content = chat.choices[0].message.content
@@ -167,14 +180,18 @@ async def run_ai_pipeline(query_text: str, session_id: str) -> AIResponse:
         if last_user_msgs:
             last_query = last_user_msgs[-1]["content"]
             search_query = f"{last_query} {query_text}"
+            print(f"[RAG] Short query detected. Extended search query: {search_query}")
     
     # Try to search NCERT for relevant context
     docs = search_ncert(search_query)
     context_str = "\n\n".join(docs) if docs else ""
     
-    # If no NCERT context found, that's OK - AI will provide general teaching advice
+    # If no NCERT context found, provide guidance without context
     if not context_str:
+        print(f"[Pipeline] No NCERT context found for query: {query_text}")
         context_str = "[No specific NCERT content found for this topic. Providing general teaching guidance.]"
+    else:
+        print(f"[Pipeline] Found {len(docs)} NCERT documents")
     
     ai_data = await generate_smart_answer(query_text, context_str, session_id)
     

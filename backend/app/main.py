@@ -167,11 +167,11 @@ async def teacher_voice_query(
         try:
             import json
             history_list = json.loads(chat_history)
-            clear_memory(teacher_id)
+            clear_memory(session_id)
             from app.schemas import ChatMessage
             for msg in history_list:
                 if isinstance(msg, dict) and msg.get("role") in ["user", "assistant"]:
-                    add_to_memory(teacher_id, msg.get("role"), msg.get("text", ""))
+                    add_to_memory(session_id, msg.get("role"), msg.get("text", ""))
         except:
             pass
     
@@ -181,7 +181,12 @@ async def teacher_voice_query(
     if not text:
         raise HTTPException(status_code=400, detail="Audio could not be understood")
     
-    response = await run_ai_pipeline(text, teacher_id)
+    # If transcription is very short (less than 3 words), it might be a recognition error
+    word_count = len(text.split())
+    if word_count < 3:
+        print(f"[Voice Query] Warning: Very short transcription ({word_count} words): {text}")
+    
+    response = await run_ai_pipeline(text, session_id)
     
     # Save to chat history
     from app.models import ChatMessage as DBChatMessage

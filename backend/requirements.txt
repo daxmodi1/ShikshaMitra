@@ -12,7 +12,7 @@ python-dotenv
 pydantic-settings
 pydantic[email]
 groq
-chromadb
+chromadb    
 sentence-transformers
 python-multipart
 requests

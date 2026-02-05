@@ -183,22 +183,35 @@ async def handle_whatsapp_voice(from_number: str, media_url: str, media_type: st
         
         # Download audio from Twilio URL
         print(f"[WhatsApp Voice] Downloading from: {media_url}")
-        async with httpx.AsyncClient() as client:
-            # Add Twilio auth to the request
-            auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            response = await client.get(media_url, auth=auth)
-            if response.status_code != 200:
-                print(f"[WhatsApp Voice] Failed to download: {response.status_code}")
-                return "माफ करें, आवाज़ डाउनलोड में समस्या हुई।\n\nError downloading voice message."
-            
-            audio_bytes = response.content
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Twilio media URLs are pre-signed, no auth needed
+                response = await client.get(media_url)
+                if response.status_code != 200:
+                    print(f"[WhatsApp Voice] Failed to download: {response.status_code}")
+                    return "माफ करें, आवाज़ डाउनलोड में समस्या हुई।\n\nError downloading voice message."
+                
+                audio_bytes = response.content
+        except Exception as download_err:
+            print(f"[WhatsApp Voice] Download exception: {download_err}")
+            return "माफ करें, आवाज़ डाउनलोड में समस्या हुई।\n\nError downloading voice message."
         
-        print(f"[WhatsApp Voice] Downloaded {len(audio_bytes)} bytes")
+        print(f"[WhatsApp Voice] Downloaded {len(audio_bytes)} bytes, Media type: {media_type}")
+        
+        # Determine file extension from media type
+        ext_map = {
+            "audio/ogg": "ogg",
+            "audio/webm": "webm",
+            "audio/wav": "wav",
+            "audio/mpeg": "mp3",
+            "audio/mp4": "m4a"
+        }
+        ext = ext_map.get(media_type, "ogg")
         
         # Transcribe audio
         try:
             audio_file = io.BytesIO(audio_bytes)
-            audio_file.name = "whatsapp_voice.ogg"
+            audio_file.name = f"whatsapp_voice.{ext}"
             transcribed_text = await transcribe_audio(audio_file)
             print(f"[WhatsApp Voice] Transcribed: {transcribed_text}")
         except Exception as trans_err:
