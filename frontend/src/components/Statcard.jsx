@@ -1,10 +1,10 @@
 export default function StatCard({ title, value }) {
   return (
-    <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-      <div className="text-xs uppercase tracking-wide text-gray-500">
+    <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl">
+      <div className="text-[11px] uppercase tracking-[0.24em] text-white/42">
         {title}
       </div>
-      <div className="text-2xl font-semibold text-gray-900 mt-2">
+      <div className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-white">
         {value}
       </div>
     </div>

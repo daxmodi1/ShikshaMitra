@@ -28,9 +28,14 @@ export default function App() {
       <Route
         path="/app/*"
         element={
-          <div className="flex min-h-screen bg-gray-100">
+          <div className="flex min-h-screen bg-[#07080c] text-white">
             <Sidebar />
-            <div className="flex-1 p-6">
+            <div className="relative flex-1 overflow-hidden">
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(111,175,190,0.18),transparent_34%),radial-gradient(circle_at_right,rgba(108,75,119,0.16),transparent_28%)]" />
+                <div className="absolute inset-0 bg-[#07080c]/94" />
+              </div>
+              <div className="relative h-full p-6">
               <Routes>
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="teachers" element={<Teachers />} />
@@ -40,6 +45,7 @@ export default function App() {
                 <Route path="insights" element={<Insights />} />
                 <Route path="reports" element={<Reports />} />
               </Routes>
+              </div>
             </div>
           </div>
         }

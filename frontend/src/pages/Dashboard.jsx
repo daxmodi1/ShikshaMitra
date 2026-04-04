@@ -11,7 +11,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
 
 export default function Dashboard() {
@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem("user");
     if (userData) {
       setUser(JSON.parse(userData));
     }
@@ -32,7 +32,7 @@ export default function Dashboard() {
     try {
       const [analyticsData, teachersData] = await Promise.all([
         api.getCRPAnalytics(),
-        api.getCRPTeachers()
+        api.getCRPTeachers(),
       ]);
       setAnalytics(analyticsData);
       setTeachers(teachersData);
@@ -45,92 +45,134 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-xl text-gray-600">Loading dashboard...</div>
+      <div className="flex h-screen items-center justify-center">
+        <div className="rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm text-white/68">
+          Loading dashboard...
+        </div>
       </div>
     );
   }
 
-  // Prepare chart data
-  const topicData = analytics?.top_topics?.map(item => ({
-    name: item.topic,
-    value: item.count
-  })) || [];
+  const topicData =
+    analytics?.top_topics?.map((item) => ({
+      name: item.topic,
+      value: item.count,
+    })) || [];
 
-  const sentimentData = Object.entries(analytics?.sentiment_distribution || {}).map(([name, value]) => ({
+  const sentimentData = Object.entries(
+    analytics?.sentiment_distribution || {}
+  ).map(([name, value]) => ({
     name,
-    value
+    value,
   }));
 
-  const languageData = Object.entries(analytics?.language_distribution || {}).map(([name, value]) => ({
+  const languageData = Object.entries(
+    analytics?.language_distribution || {}
+  ).map(([name, value]) => ({
     name,
-    value
+    value,
   }));
 
-  const COLORS = ["#1d4ed8", "#f59e0b", "#dc2626", "#16a34a", "#8b5cf6"];
+  const COLORS = ["#8ecae6", "#f6bd60", "#ee6c4d", "#84dcc6", "#cdb4db"];
+
+  const panelClass =
+    "rounded-[30px] border border-white/10 bg-white/[0.04] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl";
 
   return (
-    <>
-      {/* Header */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Welcome, {user?.name}
-            </h1>
-            <p className="text-gray-600">Cluster Resource Person Dashboard</p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-white/42">
+            Cluster Overview
           </div>
-          <div className="w-full max-w-xs">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search teachers, topics..."
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
+          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
+            Welcome, {user?.name}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/58">
+            Monitor teacher activity, language usage, and classroom support patterns
+            in one calm dashboard.
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm">
+          <input
+            type="text"
+            placeholder="Search teachers, topics..."
+            className="w-full rounded-full border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/34 focus:border-white/16 focus:outline-none"
+          />
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Total Teachers" value={analytics?.total_teachers || 0} />
-        <StatCard title="Active Teachers Today" value={analytics?.active_teachers_today || 0} />
+        <StatCard
+          title="Active Teachers Today"
+          value={analytics?.active_teachers_today || 0}
+        />
         <StatCard title="Queries Today" value={analytics?.total_queries_today || 0} />
         <StatCard
-          title="Avg Queries/Teacher"
-          value={analytics?.total_teachers ? 
-            Math.round((teachers.reduce((sum, t) => sum + t.total_queries, 0) / analytics.total_teachers) * 10) / 10 : 0
+          title="Avg Queries / Teacher"
+          value={
+            analytics?.total_teachers
+              ? Math.round(
+                  (teachers.reduce((sum, t) => sum + t.total_queries, 0) /
+                    analytics.total_teachers) *
+                    10
+                ) / 10
+              : 0
           }
         />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Top Topics Bar Chart */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Top Query Topics</h2>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className={panelClass}>
+          <h2 className="text-lg font-semibold text-white">Top Query Topics</h2>
+          <p className="mt-1 text-sm text-white/45">
+            What teachers are asking about most right now.
+          </p>
           {topicData.length > 0 ? (
-            <div className="h-64">
+            <div className="mt-5 h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topicData} margin={{ left: 8, right: 8, bottom: 24 }}>
-                  <XAxis dataKey="name" angle={-20} textAnchor="end" height={60} />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#1d4ed8" radius={[6, 6, 0, 0]} />
+                <BarChart data={topicData} margin={{ left: 0, right: 8, bottom: 18 }}>
+                  <XAxis
+                    dataKey="name"
+                    angle={-20}
+                    textAnchor="end"
+                    height={60}
+                    tick={{ fill: "rgba(255,255,255,0.48)", fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#13141a",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "16px",
+                      color: "#fff",
+                    }}
+                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                  />
+                  <Bar dataKey="value" fill="#d7f9f1" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-20">No data available</p>
+            <p className="py-24 text-center text-sm text-white/42">No data available</p>
           )}
         </div>
 
-        {/* Sentiment Distribution Pie Chart */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Query Sentiment Distribution</h2>
+        <div className={panelClass}>
+          <h2 className="text-lg font-semibold text-white">Sentiment Mix</h2>
+          <p className="mt-1 text-sm text-white/45">
+            Distribution across the latest teacher queries.
+          </p>
           {sentimentData.length > 0 ? (
-            <div className="h-64">
+            <div className="mt-5 h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -139,72 +181,106 @@ export default function Dashboard() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={88}
                     label
+                    labelStyle={{ fill: "rgba(255,255,255,0.62)", fontSize: 12 }}
                   >
                     {sentimentData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#13141a",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "16px",
+                      color: "#fff",
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-20">No data available</p>
+            <p className="py-24 text-center text-sm text-white/42">No data available</p>
           )}
         </div>
       </div>
 
-      {/* Language Distribution */}
-      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm mb-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Language Distribution</h2>
+      <div className={panelClass}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Language Distribution</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Track how support demand is spreading across languages.
+            </p>
+          </div>
+        </div>
+
         {languageData.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
             {languageData.map((lang, idx) => (
-              <div key={idx} className="rounded-lg border border-gray-100 p-4 text-center">
-                <div className="text-2xl font-semibold text-blue-600">{lang.value}</div>
-                <div className="text-xs text-gray-600 mt-1">{lang.name}</div>
+              <div
+                key={idx}
+                className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4 text-center"
+              >
+                <div className="text-3xl font-semibold tracking-[-0.03em] text-white">
+                  {lang.value}
+                </div>
+                <div className="mt-2 text-xs uppercase tracking-[0.2em] text-white/42">
+                  {lang.name}
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-10">No data available</p>
+          <p className="py-12 text-center text-sm text-white/42">No data available</p>
         )}
       </div>
 
-      {/* Teacher Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Your Teachers</h2>
+      <div className={`${panelClass} overflow-hidden p-0`}>
+        <div className="border-b border-white/8 px-5 py-4">
+          <h2 className="text-lg font-semibold text-white">Your Teachers</h2>
+          <p className="mt-1 text-sm text-white/45">
+            A quick view of teacher usage and recent activity.
+          </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="w-full min-w-[880px]">
+            <thead className="bg-white/[0.03]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Grade</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Subject</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Total Queries</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Last Active</th>
+                {[
+                  "Name",
+                  "Email",
+                  "Grade",
+                  "Subject",
+                  "Location",
+                  "Total Queries",
+                  "Last Active",
+                ].map((heading) => (
+                  <th
+                    key={heading}
+                    className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-white/42"
+                  >
+                    {heading}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-white/8">
               {teachers.map((teacher) => (
-                <tr key={teacher.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-900">{teacher.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{teacher.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{teacher.grade}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{teacher.subject}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{teacher.location}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{teacher.total_queries}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {teacher.last_active 
+                <tr key={teacher.id} className="transition hover:bg-white/[0.03]">
+                  <td className="px-5 py-4 text-sm font-medium text-white">
+                    {teacher.name}
+                  </td>
+                  <td className="px-5 py-4 text-sm text-white/58">{teacher.email}</td>
+                  <td className="px-5 py-4 text-sm text-white/68">{teacher.grade}</td>
+                  <td className="px-5 py-4 text-sm text-white/68">{teacher.subject}</td>
+                  <td className="px-5 py-4 text-sm text-white/68">{teacher.location}</td>
+                  <td className="px-5 py-4 text-sm text-white/68">
+                    {teacher.total_queries}
+                  </td>
+                  <td className="px-5 py-4 text-sm text-white/52">
+                    {teacher.last_active
                       ? new Date(teacher.last_active).toLocaleDateString()
                       : "Never"}
                   </td>
@@ -214,6 +290,6 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
-    </>
+    </div>
   );
 }
