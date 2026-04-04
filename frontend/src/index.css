@@ -12,3 +12,28 @@
 .font-instrument-serif {
   font-family: 'Instrument Serif', Georgia, serif;
 }
+
+.auth-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.auth-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.auth-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auth-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.auth-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.18));
+  background-clip: padding-box;
+}

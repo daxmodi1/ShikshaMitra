@@ -133,11 +133,11 @@ export default function Login() {
   };
 
   const inputClassName =
-    "w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-emerald-200/40 focus:bg-white/[0.06]";
+    "w-full rounded-2xl border border-transparent bg-white/[0.05] px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:bg-white/[0.07]";
 
   return (
     <div className="min-h-screen overflow-hidden bg-[#0a0a0f] text-white">
-      <div className="relative min-h-screen">
+      <div className="relative min-h-screen lg:h-screen">
         <div className="pointer-events-none absolute inset-0">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90"
@@ -146,10 +146,10 @@ export default function Login() {
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,10,15,0.22)_0%,rgba(10,10,15,0.52)_55%,rgba(10,10,15,0.78)_100%)]" />
         </div>
 
-        <div className="relative z-10 mx-auto grid min-h-screen max-w-7xl gap-8 px-6 py-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-          <section className="hidden lg:block">
+        <div className="relative z-10 mx-auto grid min-h-screen max-w-7xl gap-8 px-6 py-6 lg:h-screen lg:grid-cols-[0.92fr_1.08fr] lg:gap-10 lg:overflow-hidden">
+          <section className="hidden lg:flex lg:min-h-0 lg:items-center">
             <div className="max-w-lg">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white/70 backdrop-blur">
+              <div className="inline-flex items-center gap-3 rounded-full bg-white/[0.04] px-4 py-2.5 text-xs text-white/70 backdrop-blur">
                 <img src="/logo_with_bg.svg" alt="" className="h-5 w-5" />
                 Shiksha Mitra access for teachers and school leaders
               </div>
@@ -164,7 +164,7 @@ export default function Login() {
                   : "Sign in to continue with a calmer, sharper AI workflow for teaching and school support."}
               </p>
 
-              <div className="mt-8 space-y-3 rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.24)] backdrop-blur">
+              <div className="mt-8 space-y-3 rounded-[1.6rem] bg-white/[0.03] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.24)] backdrop-blur">
                 {[
                   "Teacher-ready AI planning and response support",
                   "Separate access flows for CRPs and teachers",
@@ -179,11 +179,11 @@ export default function Login() {
             </div>
           </section>
 
-          <section className="w-full">
-            <div className="mx-auto w-full max-w-lg rounded-[1.7rem] border border-white/10 bg-[#11131a]/88 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-6">
+          <section className="w-full lg:min-h-0 lg:pr-2">
+            <div className="mx-auto w-full max-w-lg rounded-[1.7rem] bg-[#11131a]/88 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-6 lg:flex lg:max-h-[calc(100vh-3rem)] lg:flex-col">
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04]">
                     <img src="/logo_with_bg.svg" alt="Shiksha Mitra" className="h-7 w-7" />
                   </div>
                   <div>
@@ -199,13 +199,13 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => navigate("/")}
-                  className="rounded-full border border-white/10 px-4 py-2 text-xs text-white/65 transition hover:border-white/20 hover:text-white"
+                  className="rounded-full bg-white/[0.04] px-4 py-2 text-xs text-white/72 transition hover:bg-white/[0.08] hover:text-white"
                 >
                   Home
                 </button>
               </div>
 
-              <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
+              <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-black/20 p-2">
                 {["crp", "teacher"].map((role) => {
                   const active = loginType === role;
                   return (
@@ -215,7 +215,7 @@ export default function Login() {
                       onClick={() => setLoginType(role)}
                       className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
                         active
-                          ? "bg-white text-[#14151b] shadow-[0_10px_30px_rgba(255,255,255,0.08)]"
+                          ? "bg-[#f7eff4] text-[#17131b] shadow-[0_10px_30px_rgba(255,255,255,0.08)]"
                           : "text-white/58 hover:text-white"
                       }`}
                     >
@@ -225,11 +225,12 @@ export default function Login() {
                 })}
               </div>
 
-              <div className="mb-5 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+              <div className="mb-5 rounded-2xl bg-white/[0.03] p-4">
                 <p className="text-sm font-medium text-white">{roleCopy[loginType].title}</p>
                 <p className="mt-1 text-sm leading-6 text-white/48">{roleCopy[loginType].caption}</p>
               </div>
 
+              <div className="auth-scrollbar lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
               <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-4">
                 {isSignup && (
                   <div>
@@ -354,7 +355,7 @@ export default function Login() {
                 )}
 
                 {error && (
-                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  <div className="rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-200">
                     {error}
                   </div>
                 )}
@@ -362,7 +363,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#f7eff4] px-8 py-3.5 text-sm font-semibold text-[#17131b] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[#f7eff4] px-8 py-3.5 text-sm font-semibold text-[#17131b] transition hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? (isSignup ? "Creating account..." : "Signing in...") : isSignup ? "Create account" : "Sign in"}
                   {!loading && <ArrowRight className="h-5 w-5" />}
@@ -383,7 +384,7 @@ export default function Login() {
 
                     <button
                       type="button"
-                      className="flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-8 py-3.5 text-sm font-medium text-white/78 transition hover:border-white/20 hover:text-white"
+                      className="flex w-full items-center justify-center gap-3 rounded-full bg-white/[0.04] px-8 py-3.5 text-sm font-medium text-white/78 transition hover:bg-white/[0.08] hover:text-white"
                     >
                       <svg className="h-5 w-5" viewBox="0 0 24 24">
                         <path
@@ -422,6 +423,7 @@ export default function Login() {
                   </button>
                 </p>
               </form>
+              </div>
             </div>
           </section>
         </div>
