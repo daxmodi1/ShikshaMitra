@@ -25,8 +25,8 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-r border-white/8 bg-[#0b0b10]/92 backdrop-blur-xl">
-      <div className="border-b border-white/8 px-6 py-6">
+    <aside className="sticky top-0 flex h-screen w-72 shrink-0 flex-col border-r border-white/6 bg-[#0b0b10]/94 backdrop-blur-xl">
+      <div className="border-b border-white/6 px-6 py-6">
         <div className="flex items-center gap-3">
           <img
             src="/logo_with_bg.svg"
@@ -53,7 +53,7 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
                   isActive
-                    ? "border border-white/12 bg-white/[0.07] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.02)]"
+                    ? "border border-white/8 bg-white/[0.05] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.015)]"
                     : "border border-transparent text-white/62 hover:bg-white/[0.04] hover:text-white"
                 }`
               }
@@ -65,10 +65,10 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-white/8 p-4">
+      <div className="border-t border-white/6 p-4">
         <button
           onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-white/78 transition hover:border-white/16 hover:bg-white/[0.06] hover:text-white"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/7 bg-white/[0.03] px-4 py-3 text-sm font-medium text-white/78 transition hover:border-white/10 hover:bg-white/[0.05] hover:text-white"
         >
           <LogOut className="h-4 w-4" />
           Logout

@@ -73,10 +73,10 @@ export default function Dashboard() {
     value,
   }));
 
-  const COLORS = ["#8ecae6", "#f6bd60", "#ee6c4d", "#84dcc6", "#cdb4db"];
+  const COLORS = ["#9fd3c7", "#7eb6d9", "#b9a3d6", "#e0b38a", "#7f9cae"];
 
   const panelClass =
-    "rounded-[30px] border border-white/10 bg-white/[0.04] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl";
+    "rounded-[30px] border border-white/6 bg-white/[0.035] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl";
 
   return (
     <div className="space-y-6">
@@ -98,7 +98,7 @@ export default function Dashboard() {
           <input
             type="text"
             placeholder="Search teachers, topics..."
-            className="w-full rounded-full border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/34 focus:border-white/16 focus:outline-none"
+            className="w-full rounded-full border border-white/6 bg-white/[0.035] px-4 py-3 text-sm text-white placeholder:text-white/34 focus:border-white/10 focus:outline-none"
           />
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function Dashboard() {
                     }}
                     cursor={{ fill: "rgba(255,255,255,0.03)" }}
                   />
-                  <Bar dataKey="value" fill="#d7f9f1" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="value" fill="#b8d7d0" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -221,7 +221,7 @@ export default function Dashboard() {
             {languageData.map((lang, idx) => (
               <div
                 key={idx}
-                className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4 text-center"
+                className="rounded-[24px] border border-white/5 bg-white/[0.028] p-4 text-center"
               >
                 <div className="text-3xl font-semibold tracking-[-0.03em] text-white">
                   {lang.value}
@@ -238,7 +238,7 @@ export default function Dashboard() {
       </div>
 
       <div className={`${panelClass} overflow-hidden p-0`}>
-        <div className="border-b border-white/8 px-5 py-4">
+        <div className="border-b border-white/6 px-5 py-4">
           <h2 className="text-lg font-semibold text-white">Your Teachers</h2>
           <p className="mt-1 text-sm text-white/45">
             A quick view of teacher usage and recent activity.
@@ -246,7 +246,7 @@ export default function Dashboard() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[880px]">
-            <thead className="bg-white/[0.03]">
+            <thead className="bg-white/[0.025]">
               <tr>
                 {[
                   "Name",
@@ -266,7 +266,7 @@ export default function Dashboard() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/8">
+            <tbody className="divide-y divide-white/6">
               {teachers.map((teacher) => (
                 <tr key={teacher.id} className="transition hover:bg-white/[0.03]">
                   <td className="px-5 py-4 text-sm font-medium text-white">

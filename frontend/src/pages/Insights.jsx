@@ -27,63 +27,86 @@ export default function Insights() {
   const topTopics = analytics?.top_topics || [];
   const sentiment = analytics?.sentiment_distribution || {};
   const language = analytics?.language_distribution || {};
+  const panelClass =
+    "rounded-[30px] border border-white/6 bg-white/[0.035] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl";
 
   return (
-    <>
-      <h1 className="text-2xl font-semibold mb-6">Insights & Trends</h1>
+    <div className="space-y-6">
+      <div>
+        <div className="text-[11px] uppercase tracking-[0.3em] text-white/42">
+          Cluster Analytics
+        </div>
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
+          Insights & Trends
+        </h1>
+        <p className="mt-2 text-sm text-white/52">
+          A calmer view of what teachers are asking, feeling, and using.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Topics */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-3">Top Topics</h2>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className={panelClass}>
+          <h2 className="text-lg font-semibold text-white">Top Topics</h2>
+          <p className="mt-1 text-sm text-white/45">Most frequent teacher themes.</p>
           {topTopics.length > 0 ? (
-            <ul className="space-y-2">
-              {topTopics.map(item => (
-                <li key={item.topic} className="flex justify-between text-sm">
-                  <span className="text-gray-700">{item.topic}</span>
-                  <span className="font-semibold text-gray-900">{item.count}</span>
+            <ul className="mt-5 space-y-3">
+              {topTopics.map((item) => (
+                <li
+                  key={item.topic}
+                  className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm"
+                >
+                  <span className="text-white/72">{item.topic}</span>
+                  <span className="font-semibold text-white">{item.count}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 text-sm">No data available</p>
+            <p className="mt-10 text-sm text-white/42">No data available</p>
           )}
         </div>
 
-        {/* Sentiment Distribution */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-3">Sentiment Distribution</h2>
+        <div className={panelClass}>
+          <h2 className="text-lg font-semibold text-white">Sentiment Distribution</h2>
+          <p className="mt-1 text-sm text-white/45">How teacher queries are trending emotionally.</p>
           {Object.keys(sentiment).length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="mt-5 space-y-3">
               {Object.entries(sentiment).map(([name, value]) => (
-                <li key={name} className="flex justify-between text-sm">
-                  <span className="text-gray-700">{name}</span>
-                  <span className="font-semibold text-gray-900">{value}</span>
+                <li
+                  key={name}
+                  className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm"
+                >
+                  <span className="text-white/72">{name}</span>
+                  <span className="font-semibold text-white">{value}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 text-sm">No data available</p>
+            <p className="mt-10 text-sm text-white/42">No data available</p>
           )}
         </div>
 
-        {/* Language Usage */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm lg:col-span-2">
-          <h2 className="font-semibold text-gray-900 mb-3">Language Usage</h2>
+        <div className={`${panelClass} lg:col-span-2`}>
+          <h2 className="text-lg font-semibold text-white">Language Usage</h2>
+          <p className="mt-1 text-sm text-white/45">Track demand across languages and regions.</p>
           {Object.keys(language).length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
               {Object.entries(language).map(([name, value]) => (
-                <div key={name} className="rounded-lg border border-gray-100 p-4 text-center">
-                  <div className="text-xl font-semibold text-blue-600">{value}</div>
-                  <div className="text-xs text-gray-600 mt-1">{name}</div>
+                <div
+                  key={name}
+                  className="rounded-[24px] border border-white/5 bg-white/[0.025] p-4 text-center"
+                >
+                  <div className="text-2xl font-semibold text-white">{value}</div>
+                  <div className="mt-2 text-xs uppercase tracking-[0.2em] text-white/42">
+                    {name}
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No data available</p>
+            <p className="mt-10 text-sm text-white/42">No data available</p>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
