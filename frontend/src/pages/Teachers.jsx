@@ -24,10 +24,10 @@ export default function Teachers() {
   };
 
   if (loading) {
-    return <div className="text-center py-10">Loading teachers...</div>;
+    return <div className="py-10 text-center text-white/52">Loading teachers...</div>;
   }
 
-  const filteredTeachers = teachers.filter(t => {
+  const filteredTeachers = teachers.filter((t) => {
     const q = search.toLowerCase();
     return (
       t.name?.toLowerCase().includes(q) ||
@@ -38,74 +38,84 @@ export default function Teachers() {
   });
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Teachers</h1>
-          <p className="text-sm text-gray-600">All teachers connected to your CRP</p>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-white/42">
+            Teacher Directory
+          </div>
+          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
+            Teachers
+          </h1>
+          <p className="mt-2 text-sm text-white/52">
+            All teachers connected to your CRP, in one calmer workspace.
+          </p>
         </div>
+
         <div className="w-full max-w-xs">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search teachers..."
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-full border border-white/6 bg-white/[0.035] px-4 py-3 text-sm text-white placeholder:text-white/34 focus:border-white/10 focus:outline-none"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Grade</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Subject</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Total Queries</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Last Active</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTeachers.map(t => (
-              <tr
-                key={t.id}
-                className="border-t hover:bg-gray-50"
-              >
-                <td className="p-3 text-sm text-gray-900">{t.name}</td>
-                <td className="p-3 text-sm text-gray-600">{t.email}</td>
-                <td className="p-3 text-sm text-gray-700">{t.grade}</td>
-                <td className="p-3 text-sm text-gray-700">{t.subject}</td>
-                <td className="p-3 text-sm text-gray-700">{t.location}</td>
-                <td className="p-3">
-                  <span className="font-semibold text-gray-900">{t.total_queries}</span>
-                </td>
-                <td className="p-3 text-sm text-gray-600">
-                  {t.last_active 
-                    ? new Date(t.last_active).toLocaleDateString()
-                    : "Never"}
-                </td>
-                <td className="p-3">
-                  <button
-                    onClick={() => navigate(`/app/teachers/${t.id}`)}
-                    className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700"
+      <div className="overflow-hidden rounded-[30px] border border-white/6 bg-white/[0.035] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px]">
+            <thead className="bg-white/[0.025]">
+              <tr>
+                {[
+                  "Name",
+                  "Email",
+                  "Grade",
+                  "Subject",
+                  "Location",
+                  "Total Queries",
+                  "Last Active",
+                  "Actions",
+                ].map((heading) => (
+                  <th
+                    key={heading}
+                    className="p-4 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-white/42"
                   >
-                    View Chats
-                  </button>
-                </td>
+                    {heading}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        
+            </thead>
+            <tbody className="divide-y divide-white/6">
+              {filteredTeachers.map((t) => (
+                <tr key={t.id} className="transition hover:bg-white/[0.03]">
+                  <td className="p-4 text-sm font-medium text-white">{t.name}</td>
+                  <td className="p-4 text-sm text-white/58">{t.email}</td>
+                  <td className="p-4 text-sm text-white/64">{t.grade}</td>
+                  <td className="p-4 text-sm text-white/64">{t.subject}</td>
+                  <td className="p-4 text-sm text-white/64">{t.location}</td>
+                  <td className="p-4 text-sm font-semibold text-white">{t.total_queries}</td>
+                  <td className="p-4 text-sm text-white/52">
+                    {t.last_active ? new Date(t.last_active).toLocaleDateString() : "Never"}
+                  </td>
+                  <td className="p-4">
+                    <button
+                      onClick={() => navigate(`/app/teachers/${t.id}`)}
+                      className="rounded-full border border-white/7 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/78 transition hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
+                    >
+                      View Chats
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {filteredTeachers.length === 0 && (
-          <div className="text-center py-10 text-gray-500">
-            No teachers found
-          </div>
+          <div className="py-12 text-center text-white/42">No teachers found</div>
         )}
       </div>
-    </>
+    </div>
   );
 }
