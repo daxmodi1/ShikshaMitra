@@ -73,7 +73,7 @@ export default function Dashboard() {
     value,
   }));
 
-  const COLORS = ["#9fd3c7", "#7eb6d9", "#b9a3d6", "#e0b38a", "#7f9cae"];
+  const COLORS = ["#9eb8b4", "#96abc1", "#9e9ab8", "#7d8f9f", "#b7c1cb"];
 
   const panelClass =
     "rounded-[30px] border border-white/6 bg-white/[0.035] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-xl";
@@ -157,7 +157,7 @@ export default function Dashboard() {
                     }}
                     cursor={{ fill: "rgba(255,255,255,0.03)" }}
                   />
-                  <Bar dataKey="value" fill="#b8d7d0" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="value" fill="#a9bfc0" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

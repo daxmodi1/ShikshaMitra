@@ -35,7 +35,7 @@ export default function Reports() {
             <div className="text-[11px] uppercase tracking-[0.24em] text-white/42">
               High Priority
             </div>
-            <div className="mt-3 text-3xl font-semibold text-[#e0b38a]">{highRiskTeachers}</div>
+            <div className="mt-3 text-3xl font-semibold text-[#a9bfc0]">{highRiskTeachers}</div>
           </div>
         </div>
 
